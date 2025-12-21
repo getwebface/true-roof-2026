@@ -1,69 +1,50 @@
-import { data } from "react-router";
-import type { Route } from "./+types/$";
+import { useLoaderData } from "react-router";
 import { createClient } from "@supabase/supabase-js";
+import type { Route } from "./+types/$";
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const env = context.cloudflare.env as any;
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env;
+// Import Templates
+import HomeTemplate from "~/components/templates/HomeTemplate";
+import ServiceHubTemplate from "~/components/templates/ServiceHubTemplate";
+import LocalServiceTemplate from "~/components/templates/LocalServiceTemplate";
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const env = (context as any).cloudflare?.env || process.env;
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
   
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const slug = params["*"] || "/"; // Handle root slug
 
-  const url = new URL(request.url);
-  const slug = url.pathname.replace(/^\/|\/$/g, ''); 
-  const searchSlug = slug === "" ? "/" : slug;
-
-  const { data: page, error } = await supabase
-    .from('pages')
-    .select('*')
-    .eq('slug', searchSlug)
-    .eq('status', 'published')
+  const { data, error } = await supabase
+    .from("pages")
+    .select("*")
+    .eq("slug", slug)
     .single();
 
-  if (!page || error) {
-    throw data("Page Not Found", { status: 404 });
-  }
+  if (error || !data) throw new Response("Not Found", { status: 404 });
 
-  return data({ page }, {
-    headers: {
-      "Cache-Control": "public, max-age=3600, s-maxage=604800",
-    },
-  });
+  // Parse the JSON once in the loader
+  const sections = typeof data.content_sections === 'string' 
+    ? JSON.parse(data.content_sections) 
+    : data.content_sections;
+
+  return { page: data, sections };
 }
 
-export default function DynamicPage({ loaderData }: Route.ComponentProps) {
-  const { page } = loaderData;
-  const content = page.content_sections || {}; 
+export default function DynamicPage() {
+  const { page, sections } = useLoaderData<typeof loader>();
 
-  return (
-    <div style={{ fontFamily: "sans-serif", lineHeight: "1.6", color: "#333" }}>
-      <header style={{ padding: "2rem", background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>{page.h1_heading}</h1>
-          {page.location_name && (
-            <span style={{ 
-              background: "#dcfce7", color: "#166534", 
-              padding: "0.25rem 0.75rem", borderRadius: "999px", 
-              fontWeight: "bold", fontSize: "0.875rem" 
-            }}>
-              📍 Serving {page.location_name}
-            </span>
-          )}
+  switch (page.page_type) {
+    case "home":
+      return <HomeTemplate data={page} sections={sections} />;
+    case "service_hub":
+      return <ServiceHubTemplate data={page} sections={sections} />;
+    case "local_service":
+      return <LocalServiceTemplate data={page} sections={sections} />;
+    default:
+      return (
+        <div className="p-20 text-center">
+          <h1>{page.h1_heading}</h1>
+          <p>Generic layout fallback.</p>
         </div>
-      </header>
-      <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-        {Object.entries(content).map(([key, value]) => (
-          <div key={key} style={{ marginBottom: "2rem" }}>
-            <h3 style={{ color: "#666", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "1px" }}>
-              {key.replace(/_/g, " ")}
-            </h3>
-            <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
-                {JSON.stringify(value, null, 2).replace(/"/g, '')}
-              </pre>
-            </div>
-          </div>
-        ))}
-      </main>
-    </div>
-  );
+      );
+  }
 }
