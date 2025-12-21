@@ -1,7 +1,6 @@
-import { ReactRouterServer } from "@react-router/dev/server";
-import { logDevReady } from "@react-router/cloudflare";
-import { renderToReadableStream } from "react-dom/server";
+import { ReactRouterServer } from "react-router";
 import type { AppLoadContext, EntryContext } from "react-router";
+import { renderToReadableStream } from "react-dom/server";
 
 export default async function handleRequest(
   request: Request,
