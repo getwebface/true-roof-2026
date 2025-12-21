@@ -1,20 +1,24 @@
 export default function LocalServiceTemplate({ data, sections }) {
   return (
-    <div className="min-h-screen bg-slate-50 font-sans py-16 px-6">
-      <div className="max-w-4xl mx-auto bg-white p-10 rounded-3xl shadow-sm border border-slate-200">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
-          <h1 className="text-4xl font-black text-slate-900">{data.h1_heading}</h1>
-          <div className="bg-red-600 text-white px-6 py-2 rounded-full font-bold animate-pulse">
-            Local to {data.location_name}
-          </div>
+    <div className="font-sans bg-white">
+      <div className="bg-blue-900 text-white py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <span className="bg-blue-500/20 text-blue-300 px-4 py-1 rounded-full font-bold text-sm uppercase tracking-widest">
+            24/7 Response in {data.location_name}
+          </span>
+          <h1 className="text-5xl font-black mt-6 mb-8">{data.h1_heading}</h1>
+          <p className="text-2xl text-blue-100 opacity-90 leading-relaxed">{sections.local_intro}</p>
         </div>
-        
-        <div className="prose prose-lg max-w-none text-slate-700">
-          <p className="mb-8 leading-relaxed text-lg">{sections?.local_intro}</p>
-          
-          <div className="bg-blue-900 text-white p-8 rounded-2xl shadow-inner my-10">
-            <h3 className="text-2xl font-bold mb-2">Exclusive {data.location_name} Offer</h3>
-            <p className="text-blue-100 text-lg">{sections?.local_offer}</p>
+      </div>
+      <div className="max-w-4xl mx-auto px-6 -mt-10">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 text-center">
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Need Help Immediately?</h2>
+          <p className="text-lg text-slate-600 mb-8 font-medium">{sections.local_offer}</p>
+          <button className="w-full bg-red-600 text-white py-6 rounded-2xl text-2xl font-black shadow-xl hover:bg-red-700 transition-all active:scale-95">
+            CALL NOW: 04XX XXX XXX
+          </button>
+          <div className="mt-8 pt-8 border-t flex justify-center gap-8 text-slate-400 font-bold uppercase text-xs tracking-widest">
+            <span>✓ Licensed</span> <span>✓ Local</span> <span>✓ Insured</span>
           </div>
         </div>
       </div>

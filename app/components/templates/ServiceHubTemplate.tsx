@@ -1,18 +1,18 @@
 export default function ServiceHubTemplate({ data, sections }) {
   return (
-    <div className="min-h-screen bg-white font-sans py-16 px-6">
+    <div className="bg-slate-50 min-h-screen py-20 px-6 font-sans">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-slate-900 border-b-4 border-blue-600 inline-block mb-8 pb-2">
-          {data.h1_heading}
-        </h1>
-        <p className="text-xl text-slate-600 leading-relaxed mb-12">
-          {sections?.intro_text}
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {sections?.service_list?.map((service, i) => (
-            <div key={i} className="group p-8 border-2 border-slate-100 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer">
-              <h3 className="text-2xl font-bold text-slate-800 group-hover:text-blue-700">{service}</h3>
-              <p className="mt-2 text-slate-500 italic">Professional {data.service_category} solution</p>
+        <header className="mb-16">
+          <h1 className="text-5xl font-black text-slate-900 mb-6">{data.h1_heading}</h1>
+          <p className="text-2xl text-slate-600 leading-relaxed">{sections.intro_text}</p>
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {sections.service_list?.map((service, i) => (
+            <div key={i} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-500 transition-all group">
+              <h3 className="text-2xl font-bold mb-4 group-hover:text-blue-600">{service}</h3>
+              <button className="text-blue-600 font-bold flex items-center gap-2">
+                Learn More <span>→</span>
+              </button>
             </div>
           ))}
         </div>
