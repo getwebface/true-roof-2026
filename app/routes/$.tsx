@@ -2,9 +2,7 @@ import { data } from "react-router";
 import type { Route } from "./+types/$";
 import { createClient } from "@supabase/supabase-js";
 
-// 1. THE BACKEND LOGIC
 export async function loader({ request, context }: Route.LoaderArgs) {
-  // In React Router v7 on Cloudflare, env vars are in context.cloudflare.env
   const env = context.cloudflare.env as any;
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = env;
   
@@ -25,7 +23,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     throw data("Page Not Found", { status: 404 });
   }
 
-  // Return data with Cache Headers (ISR)
   return data({ page }, {
     headers: {
       "Cache-Control": "public, max-age=3600, s-maxage=604800",
@@ -33,7 +30,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   });
 }
 
-// 2. THE FRONTEND UI
 export default function DynamicPage({ loaderData }: Route.ComponentProps) {
   const { page } = loaderData;
   const content = page.content_sections || {}; 
@@ -54,7 +50,6 @@ export default function DynamicPage({ loaderData }: Route.ComponentProps) {
           )}
         </div>
       </header>
-
       <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
         {Object.entries(content).map(([key, value]) => (
           <div key={key} style={{ marginBottom: "2rem" }}>
