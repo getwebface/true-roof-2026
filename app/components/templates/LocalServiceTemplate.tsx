@@ -215,9 +215,9 @@ const schema = {
 "latitude": data.location.latitude || -37.8136,
 "longitude": data.location.longitude || 144.9631
 },
-"geoRadius": data.location.service_radius_km * 1000
+"geoRadius": data.location.service_radius_km || 25) * 1000
 },
-"priceRange": "
+"priceRange": "$"
 "
 };
 return (
