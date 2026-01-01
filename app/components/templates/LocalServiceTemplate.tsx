@@ -346,8 +346,7 @@ if (isNaN(numeric)) {
 setDisplay(value);
 return;
 }
-code
-Code
+
 let start = 0;
 const duration = 2000;
 const startTime = performance.now();
@@ -388,8 +387,7 @@ return (
 <section className="relative min-h-[90vh] flex items-center bg-slate-950 pt-24 pb-12 overflow-hidden">
 <MapTextureBackground />
 <NoiseOverlay opacity={0.04} />
-code
-Code
+
 {/* Dynamic Background Orbs */}
   <motion.div 
     className="absolute top-0 -left-64 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px]"
@@ -585,8 +583,7 @@ return (
 </h2>
 <p className="text-lg text-slate-600 max-w-2xl">{section.subheadline}</p>
 </div>
-code
-Code
+
 {/* Stats Grid */}
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
       {section.stats.map((stat, idx) => (
@@ -690,8 +687,7 @@ Field Report
 <div className="text-white font-mono">{section.last_inspection_date}</div>
 </div>
 </div>
-code
-Code
+
 {/* Location Summary */}
     <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl border border-white/10 mb-12">
       <h3 className="text-white font-bold mb-4 flex items-center gap-2">
@@ -768,8 +764,7 @@ return (
 <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{section.headline}</h2>
 <p className="text-slate-600 max-w-2xl mx-auto">{section.subheadline}</p>
 </div>
-code
-Code
+
 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
       {section.services.map((service, idx) => (
         <motion.div
@@ -840,8 +835,7 @@ return (
 <div>
 <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">{section.headline}</h2>
 <p className="text-lg text-slate-600 mb-8">{section.subheadline}</p>
-code
-Code
+
 <div className="flex gap-8 mb-12">
           <div>
             <div className="text-4xl font-bold text-slate-900">{section.avg_rating}</div>
@@ -949,8 +943,7 @@ export default function LocalServiceTemplate({ data, sections }: LocalServiceTem
 return (
 <div className="bg-slate-50 min-h-screen font-sans selection:bg-emerald-500/30">
 <LocalBusinessSchema data={data} />
-code
-Code
+
 <main>
     <HeroSection section={sections.hero} leadCapture={sections.lead_capture} data={data} />
     <LocalIntelSection section={sections.local_intel} data={data} />
