@@ -4,10 +4,10 @@
 // Enhanced for Local SEO: Semantic HTML, Schema.org integration, and Keyword Density
 'use client';
 import React, {
-useState,
-useEffect,
-useRef,
-useCallback,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
 } from 'react';
 import {
 motion,
@@ -220,7 +220,7 @@ const LocalBusinessSchema: React.FC<{ data?: SiteData }> = ({ data }) => {
         "longitude": safeData.location?.longitude ?? 144.9631
       },
       // Ensure math is wrapped in parentheses correctly with null safety
-      "geoRadius": ((safeData.location?.service_radius_km ?? 25) * 1000)
+      "geoRadius": Number(safeData.location?.service_radius_km ?? 25) * 1000
     },
     "priceRange": "$"
   };
@@ -497,14 +497,14 @@ return (
           animate={{ height: 'auto', opacity: 1 }}
           className={clsx(
             "mb-8 rounded-lg border px-4 py-3 flex items-center gap-3",
-            safeSection.weather_alert.severity === 'danger' ? "bg-red-500/20 border-red-500/30 text-red-200" :
-            safeSection.weather_alert.severity === 'warning' ? "bg-amber-500/20 border-amber-500/30 text-amber-200" :
+            safeSection.weather_alert?.severity === 'danger' ? "bg-red-500/20 border-red-500/30 text-red-200" :
+            safeSection.weather_alert?.severity === 'warning' ? "bg-amber-500/20 border-amber-500/30 text-amber-200" :
             "bg-blue-500/20 border-blue-500/30 text-blue-200"
           )}
         >
           <span className="text-xl">⚠️</span>
           <p className="text-sm font-medium">
-            <strong>{safeSection.weather_alert.type}:</strong> {safeSection.weather_alert.message}
+            <strong>{safeSection.weather_alert?.type ?? 'Alert'}:</strong> {safeSection.weather_alert?.message ?? ''}
           </p>
         </motion.div>
       )}
@@ -585,7 +585,9 @@ return (
 
             {!formState.submitted ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {(safeLeadCapture.form_fields ?? []).map((field) => (
+                {(safeLeadCapture.form_fields ?? [])
+                  .filter(field => field.id && field.id.trim() !== '')
+                  .map((field) => (
                   <div key={field.id}>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                       {field.label} {field.required && <span className="text-red-400">*</span>}
@@ -968,7 +970,7 @@ return (
           <div className="w-px bg-slate-300" />
           <div>
             <div className="text-4xl font-bold text-slate-900">{section.total_jobs_in_area}</div>
-            <div className="text-slate-500 text-sm">Jobs in {data.location.suburb}</div>
+            <div className="text-slate-500 text-sm">Jobs in {data.location?.suburb ?? 'Local Area'}</div>
           </div>
         </div>
 
@@ -1168,7 +1170,7 @@ export default function LocalServiceTemplate({ data, sections }: LocalServiceTem
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-white font-bold text-xl">{safeData.site_name}</div>
           <div className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} {safeData.site_name}. Serving {safeData.location.suburb} & {safeData.location.region}.
+            © {new Date().getFullYear()} {safeData.site_name}. Serving {safeData.location?.suburb ?? 'Local Area'} & {safeData.location?.region ?? ''}.
           </div>
         </div>
       </footer>
