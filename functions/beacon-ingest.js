@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// CORS Configuration
+// Standard CORS headers for all responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -10,7 +10,7 @@ const corsHeaders = {
 
 export default {
   async fetch(request, env, ctx) {
-    // 1. Handle Preflight OPTIONS request immediately
+    // 1. Handle the Preflight (OPTIONS) request specifically
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: corsHeaders,
@@ -18,49 +18,40 @@ export default {
       });
     }
 
+    // 2. Only allow POST for the actual data processing
+    if (request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 405,
+      });
+    }
+
     try {
-      // 2. Validate Request Method
-      if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 405,
-        });
-      }
-
-      // 3. Parse Body
-      let data;
-      try {
-        data = await request.json();
-      } catch (e) {
-        return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
-      }
-
-      // 4. Validate Data Payload
+      const data = await request.json();
+      
+      // 3. Validation
       if (!data.sessionId || !data.events || !Array.isArray(data.events)) {
-        return new Response(JSON.stringify({ error: 'Missing sessionId or events array' }), {
+        return new Response(JSON.stringify({ error: 'Invalid request: missing sessionId or events array' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 400 
         });
       }
 
-      // 5. Initialize Supabase
+      // 4. Initialize Supabase
       const supabaseUrl = env.SUPABASE_URL;
       const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
-
+      
       if (!supabaseUrl || !supabaseKey) {
-        console.error('Missing Supabase credentials');
-        return new Response(JSON.stringify({ error: 'Server Configuration Error' }), {
+        // Return JSON error so frontend sees it, rather than a generic network error
+        return new Response(JSON.stringify({ error: 'Server configuration error: Missing Supabase credentials' }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
+          status: 500 
         });
       }
 
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // 6. Process Data (Session)
+      // 5. Process session data
       const sessionData = {
         session_id: data.sessionId,
         user_agent: data.metadata?.userAgent || null,
@@ -73,6 +64,7 @@ export default {
         created_at: new Date().toISOString()
       };
 
+      // Upsert Session
       const { error: sessionError } = await supabase
         .from('user_sessions')
         .upsert(sessionData, {
@@ -84,7 +76,7 @@ export default {
         console.error('Session upsert error:', sessionError);
       }
 
-      // 7. Process Events in Batches
+      // 6. Process events in batches
       const batchSize = 50;
       const eventBatches = [];
       
@@ -124,7 +116,7 @@ export default {
         }
       });
 
-      // 8. Process Conversion Events
+      // 7. Process conversions
       const conversionEvents = data.events.filter(e => e.eventType === 'conversion_step');
       if (conversionEvents.length > 0) {
         const conversionPromises = conversionEvents.map(async (event) => {
@@ -151,7 +143,7 @@ export default {
 
       await Promise.allSettled(eventPromises);
 
-      // 9. Process Session End
+      // 8. Process Session End
       const sessionEndEvent = data.events.find(e => e.eventType === 'session_end');
       if (sessionEndEvent) {
         const { error: updateError } = await supabase
@@ -181,8 +173,9 @@ export default {
       });
 
     } catch (error) {
-      console.error('Beacon ingestion critical error:', error);
+      console.error('Beacon ingestion error:', error);
       
+      // Return 500 error WITH CORS headers so browser shows the actual error message
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Internal server error',
