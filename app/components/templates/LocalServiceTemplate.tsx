@@ -1,6 +1,6 @@
 
 // LocalServiceTemplate.tsx
-// TrueRoof - Local Service Command Center Template (SEO Optimized Edition)
+// TrueRoof - Local Roofing Service Template (SEO Optimized Edition)
 // Enhanced for Local SEO: Semantic HTML, Schema.org integration, and Keyword Density
 'use client';
 import React, {
@@ -19,16 +19,17 @@ useInView,
 AnimatePresence,
 } from 'framer-motion';
 import clsx from 'clsx';
+import { CORE_SERVICES } from '~/constants/services';
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-interface LiveStatus {
-status: 'active' | 'standby' | 'busy';
-crews_active: number;
-last_job_completed: string;
-current_wait_time: string;
-availability_today: number;
+interface ServiceStatus {
+status: 'available' | 'limited' | 'booked';
+teams_available: number;
+last_inspection_completed: string;
 next_available_slot: string;
+availability_today: number;
+estimated_wait_time: string;
 }
 interface LocalStat {
 id: string;
@@ -94,13 +95,13 @@ message: string;
 severity: 'info' | 'warning' | 'danger';
 }
 interface HeroSection {
-headline: string;
-headline_location: string;
-subheadline: string;
-live_status: LiveStatus;
-trust_signals: string[];
-emergency_notice?: string;
-weather_alert?: WeatherAlert;
+  headline: string;
+  headline_location: string;
+  subheadline: string;
+  service_status: ServiceStatus;
+  trust_signals: string[];
+  service_notice?: string;
+  weather_alert?: WeatherAlert;
 }
 interface FormField {
 id: string;
@@ -255,16 +256,16 @@ const MapTextureBackground: React.FC = () => (
 </svg>
 </div>
 );
-// Live Pulse Indicator
-const LivePulse: React.FC<{
-status: 'active' | 'standby' | 'busy';
+// Service Status Indicator
+const ServiceStatusIndicator: React.FC<{
+status: 'available' | 'limited' | 'booked';
 size?: 'sm' | 'md' | 'lg';
 showLabel?: boolean;
 }> = ({ status, size = 'md', showLabel = true }) => {
 const statusConfig = {
-active: { color: 'bg-emerald-500', label: 'Live', pulseColor: 'bg-emerald-400' },
-standby: { color: 'bg-amber-500', label: 'Standby', pulseColor: 'bg-amber-400' },
-busy: { color: 'bg-red-500', label: 'Busy', pulseColor: 'bg-red-400' },
+available: { color: 'bg-orange-500', label: 'Available', pulseColor: 'bg-orange-400' },
+limited: { color: 'bg-amber-500', label: 'Limited', pulseColor: 'bg-amber-400' },
+booked: { color: 'bg-slate-500', label: 'Booked', pulseColor: 'bg-slate-400' },
 };
 const config = statusConfig[status];
 const sizeClass = size === 'sm' ? 'h-2 w-2' : size === 'md' ? 'h-3 w-3' : 'h-4 w-4';
@@ -307,11 +308,11 @@ const handleMouseLeave = () => {
 x.set(0);
 y.set(0);
 };
-const variants = {
-primary: 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/25',
-secondary: 'bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20',
-danger: 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/25',
-};
+                const variants = {
+                primary: 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-500/25',
+                secondary: 'bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20',
+                danger: 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/25',
+                };
 return (
 <motion.button
 ref={ref}
@@ -426,16 +427,16 @@ return (
       >
         {/* Status Pill */}
         <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-4 py-2 mb-8 backdrop-blur-md">
-          <LivePulse status={section.live_status.status} />
+          <ServiceStatusIndicator status={section.service_status.status} />
           <span className="w-px h-4 bg-white/20" />
           <span className="text-sm text-white/60">
-            {section.live_status.crews_active} Crews in {data.location.suburb}
+            {section.service_status.teams_available} Teams in {data.location.suburb}
           </span>
         </div>
 
         <h1 className="text-5xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 tracking-tight">
           {section.headline}
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-500">
             {section.headline_location}
           </span>
         </h1>
@@ -444,26 +445,26 @@ return (
           {section.subheadline}
         </p>
 
-        {/* Operational Metrics Panel */}
+        {/* Service Metrics Panel */}
         <div className="grid grid-cols-2 gap-4 mb-10">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="text-2xl font-bold text-white mb-1">
-              {section.live_status.current_wait_time}
+              {section.service_status.estimated_wait_time}
             </div>
-            <div className="text-xs text-white/50 uppercase tracking-wider">Est. Wait Time</div>
+            <div className="text-xs text-white/50 uppercase tracking-wider">Next Available</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <div className="text-2xl font-bold text-emerald-400 mb-1">
-              {section.live_status.availability_today}
+            <div className="text-2xl font-bold text-orange-400 mb-1">
+              {section.service_status.availability_today}
             </div>
-            <div className="text-xs text-white/50 uppercase tracking-wider">Slots Today</div>
+            <div className="text-xs text-white/50 uppercase tracking-wider">Inspections Today</div>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
           {section.trust_signals.map((signal, i) => (
             <span key={i} className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-800">
-              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               {signal}
@@ -472,7 +473,7 @@ return (
         </div>
       </motion.div>
 
-      {/* Right Column: Lead Capture Interface */}
+      {/* Right Column: Quote Request Interface */}
       <motion.div
         initial={{ opacity: 0, x: 30 }}
         animate={{ opacity: 1, x: 0 }}
@@ -487,7 +488,7 @@ return (
                 <h2 className="text-xl font-bold text-white">{leadCapture.headline}</h2>
                 <p className="text-sm text-slate-400 mt-1">{leadCapture.subheadline}</p>
               </div>
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
             </div>
 
             {!formState.submitted ? (
@@ -951,16 +952,16 @@ return (
     <ServicesSection section={sections.services} data={data} />
     <SocialProofSection section={sections.social_proof} data={data} />
     
-    {/* Emergency Footer Strip */}
-    <section className="bg-red-700 py-12 relative overflow-hidden">
+    {/* Priority Service Footer */}
+    <section className="bg-orange-600 py-12 relative overflow-hidden">
       <NoiseOverlay opacity={0.05} />
       <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
         <h2 className="text-3xl font-bold text-white mb-4">{sections.emergency.headline}</h2>
-        <p className="text-red-100 mb-8 max-w-2xl mx-auto">{sections.emergency.subheadline}</p>
-        <a href={`tel:${data.phone}`} className="inline-block bg-white text-red-700 font-bold text-xl px-8 py-4 rounded-xl shadow-xl hover:scale-105 transition-transform">
+        <p className="text-orange-100 mb-8 max-w-2xl mx-auto">{sections.emergency.subheadline}</p>
+        <a href={`tel:${data.phone}`} className="inline-block bg-white text-orange-700 font-bold text-xl px-8 py-4 rounded-xl shadow-xl hover:scale-105 transition-transform">
           Call {sections.emergency.phone}
         </a>
-        <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-red-100">
+        <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-orange-100">
           {sections.emergency.features.map((feat, i) => (
             <span key={i} className="flex items-center gap-1">
               ✓ {feat}

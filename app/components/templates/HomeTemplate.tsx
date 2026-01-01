@@ -949,7 +949,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
         </motion.div>
         
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Map Visualization */}
+          {/* Service Area Visualization */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
@@ -957,7 +957,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
             className="lg:col-span-2"
           >
             <GlassCard className="relative aspect-[16/10] overflow-hidden" hover={false}>
-              {/* Grid Background */}
+              {/* Blueprint Background */}
               <div 
                 className="absolute inset-0 opacity-20"
                 style={{
@@ -970,25 +970,23 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
                 }}
               />
               
-              {/* Animated Radar Sweep */}
+              {/* Animated Construction Pulse */}
               <motion.div
                 className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.3, 0.1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <div className="absolute inset-0 rounded-full border border-white/10" />
-                <div className="absolute inset-0 origin-center rounded-full bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" 
-                     style={{ clipPath: 'polygon(50% 50%, 100% 0%, 100% 50%)' }} 
-                />
+                <div className="absolute inset-0 rounded-full border border-orange-500/20" />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-orange-500/10 to-transparent" />
               </motion.div>
               
-              {/* Center Point */}
+              {/* Center Point - Our Location */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="relative">
                   <div className="h-4 w-4 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50" />
                   <motion.div
-                    className="absolute -inset-2 rounded-full border border-orange-500"
-                    animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
+                    className="absolute -inset-2 rounded-full border border-orange-500/30"
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                 </div>
@@ -1013,15 +1011,15 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
                       <motion.div 
                         className={`h-3 w-3 rounded-full transition-all duration-300 ${
                           area.is_active 
-                            ? 'bg-green-500 shadow-lg shadow-green-500/50' 
+                            ? 'bg-orange-500 shadow-lg shadow-orange-500/50' 
                             : 'bg-white/50'
                         } ${hoveredArea === area.id || selectedArea?.id === area.id ? 'scale-150' : ''}`}
                         whileHover={{ scale: 1.5 }}
                       />
                       {area.is_active && (
                         <motion.div
-                          className="absolute -inset-1 rounded-full bg-green-500"
-                          animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+                          className="absolute -inset-1 rounded-full bg-orange-500/30"
+                          animate={{ scale: [1, 1.8], opacity: [0.3, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                         />
                       )}
@@ -1037,7 +1035,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
                           >
                             <div className="text-sm font-semibold text-slate-900">{area.name}</div>
                             <div className="mt-1 text-xs text-slate-600">
-                              {area.jobs_completed} jobs • {area.avg_rating}★
+                              {area.jobs_completed} projects • {area.avg_rating}★
                             </div>
                           </motion.div>
                         )}
@@ -1071,11 +1069,11 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`h-2.5 w-2.5 rounded-full ${area.is_active ? 'bg-green-500' : 'bg-white/30'}`} />
+                      <div className={`h-2.5 w-2.5 rounded-full ${area.is_active ? 'bg-orange-500' : 'bg-white/30'}`} />
                       <span className="font-medium text-white">{area.name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-white/60">
-                      <span>{area.jobs_completed} jobs</span>
+                      <span>{area.jobs_completed} projects</span>
                       <span className="text-amber-400">★ {area.avg_rating}</span>
                     </div>
                   </div>

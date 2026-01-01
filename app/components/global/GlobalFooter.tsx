@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { CORE_SERVICES } from '~/constants/services';
 
 interface GlobalFooterProps {
   className?: string;
@@ -30,11 +31,11 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
       )}
     >
       <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand & Copyright */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 via-red-500 to-orange-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700">
                 <span className="text-lg font-bold text-white">T</span>
               </div>
               <span className="text-xl font-bold text-white">TrueRoof 2026</span>
@@ -47,9 +48,29 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
             </div>
           </div>
 
+          {/* Our Services */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Our Services</h3>
+            <div className="space-y-2">
+              {CORE_SERVICES.map((service, index) => (
+                <motion.a
+                  key={service.id}
+                  href={`/services/${service.slug}`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-2 text-sm text-white/70 hover:text-orange-400 transition-colors group"
+                >
+                  <span className="text-base group-hover:scale-110 transition-transform">{service.icon}</span>
+                  <span className="group-hover:translate-x-1 transition-transform">{service.name}</span>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+
           {/* Service Coverage */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Service Coverage</h3>
+            <h3 className="text-lg font-semibold text-white">Service Areas</h3>
             <div className="space-y-2">
               {serviceAreas.map((area, index) => (
                 <motion.div
@@ -59,14 +80,14 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
                   transition={{ delay: index * 0.1 }}
                   className="flex items-center gap-2 text-sm text-white/70"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                   {area}
                 </motion.div>
               ))}
             </div>
             <div className="pt-4 border-t border-white/10">
               <p className="text-xs text-white/50">
-                Currently serving all LGA regions across Greater Melbourne
+                Serving all LGA regions across Greater Melbourne
               </p>
             </div>
           </div>
@@ -113,7 +134,7 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs text-white/40">
-                Operational Hours: 10am-4pm AEST Business Hours
+                Business Hours: 10am-4pm AEST
               </span>
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />

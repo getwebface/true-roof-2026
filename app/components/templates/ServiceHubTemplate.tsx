@@ -1,6 +1,6 @@
 // ServiceHubTemplate.tsx
-// TrueRoof Intelligence - Service Hub Template
-// A high-tech feature explorer with filtering matrix and tech-spec aesthetics
+// TrueRoof - Service Hub Template
+// A professional roofing service explorer with filtering and detailed specifications
 
 'use client';
 
@@ -299,7 +299,7 @@ const MagneticButton: React.FC<{
 
   const variants = {
     primary:
-      'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25',
+      'bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25',
     secondary: 'bg-slate-900 text-white hover:bg-slate-800',
     ghost: 'bg-transparent text-slate-700 hover:bg-slate-100',
     outline: 'bg-transparent border-2 border-slate-300 text-slate-700 hover:border-slate-400',
@@ -402,10 +402,10 @@ const TechBadge: React.FC<{
 };
 
 // ============================================================================
-// HERO SECTION - THE CONTROL CENTER
+// HERO SECTION - SERVICE HUB
 // ============================================================================
 
-const ControlCenterHero: React.FC<{ section: HeroSection; data: SiteData }> = ({
+const ServiceHubHero: React.FC<{ section: HeroSection; data: SiteData }> = ({
   section,
   data,
 }) => {
@@ -444,14 +444,14 @@ const ControlCenterHero: React.FC<{ section: HeroSection; data: SiteData }> = ({
         />
       </div>
 
-      {/* Animated Gradient Orbs */}
+              {/* Animated Gradient Orbs */}
       <motion.div
-        className="absolute -left-48 top-0 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px]"
+        className="absolute -left-48 top-0 h-96 w-96 rounded-full bg-orange-500/10 blur-[120px]"
         animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
         transition={{ duration: 15, repeat: Infinity }}
       />
       <motion.div
-        className="absolute -right-48 bottom-0 h-96 w-96 rounded-full bg-cyan-500/10 blur-[120px]"
+        className="absolute -right-48 bottom-0 h-96 w-96 rounded-full bg-amber-500/10 blur-[120px]"
         animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
         transition={{ duration: 18, repeat: Infinity }}
       />
@@ -523,7 +523,7 @@ const ControlCenterHero: React.FC<{ section: HeroSection; data: SiteData }> = ({
           >
             <h1 className="mb-4 text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
               {section.headline}
-              <span className="block bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
                 {section.headline_accent}
               </span>
             </h1>
@@ -1861,13 +1861,13 @@ const FloatingNav: React.FC<{ data: SiteData }> = ({ data }) => {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500">
             <span className="text-xl font-bold text-white">T</span>
           </div>
           <div>
             <span className="text-lg font-bold text-white">{data.site_name}</span>
             <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">
-              Intelligence
+              Services
             </span>
           </div>
         </div>
@@ -1993,7 +1993,7 @@ export default function ServiceHubTemplate({ data, sections }: ServiceHubTemplat
       <FloatingNav data={data} />
 
       <main>
-        <ControlCenterHero section={sections.hero} data={data} />
+        <ServiceHubHero section={sections.hero} data={data} />
 
         <FilteringMatrix
           section={sections.filtering}

@@ -145,14 +145,14 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
             {/* Text Content */}
             <div className="flex flex-col items-start">
               <span className="text-sm font-semibold tracking-wider uppercase">
-                Call Us Today
+                Call for Quote
               </span>
               <span className="text-xl font-black tracking-tight">
                 {formattedPhoneNumber}
               </span>
             </div>
 
-            {/* Call Now Badge */}
+            {/* Free Quote Badge */}
             <motion.div
               className="ml-4 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm"
               animate={{ 
@@ -161,7 +161,7 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
               }}
               transition={{ duration: 0.5, repeat: Infinity }}
             >
-              <span className="text-sm font-bold text-white">CALL NOW</span>
+              <span className="text-sm font-bold text-white">FREE QUOTE</span>
             </motion.div>
 
             {/* Mobile Indicator */}
