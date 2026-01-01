@@ -7,6 +7,8 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from "react-router";
+import { useEffect } from "react"; // <--- 1. Add this import
+import { initBehaviorTracker } from "~/lib/tracking/behaviorTracker"; // <--- 2. Add this import
 
 import "./app.css";
 import GlobalNav from "./components/global/GlobalNav";
@@ -37,6 +39,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // 3. Add this useEffect block to initialize tracking
+  useEffect(() => {
+    initBehaviorTracker({
+      // 👇 PASTE YOUR CLOUDFLARE WORKER URL HERE
+      beaconEndpoint: 'beacon-ingest.josh-f96.workers.dev', 
+      
+      sampleRate: 1.0,
+      debug: import.meta.env.DEV // Enables logs only in development
+    });
+  }, []);
+
   return <Outlet />;
 }
 
