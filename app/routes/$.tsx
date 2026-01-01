@@ -39,16 +39,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   /**
-   * THE FIX: Data Enrichment
-   * LocalServiceTemplate expects a 'location' object. We map the flat 
-   * Supabase columns to the object structure the component requires.
+   * DATA ENRICHMENT FIX:
+   * LocalServiceTemplate expects a 'location' object with suburb, state, and postcode.
+   * We map the separate Supabase columns to the object structure required by the component.
    */
   const enrichedPage = {
     ...data,
     location: {
       suburb: data.location_name || "Local Area",
       state: data.location_state_region || "VIC",
-      postcode: "3756" // Default or map from a new column if available
+      postcode: "3756" // Defaulting to the target area postcode
     }
   };
 
@@ -58,7 +58,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export default function DynamicPage() {
   const { page, sections, error } = useLoaderData<typeof loader>();
 
-  // Error safety net to prevent 500 crashes
+  // Error safety net to prevent 500 crashes and provide debugging info
   if (error || !page) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100 p-10 font-sans">
@@ -69,7 +69,7 @@ export default function DynamicPage() {
           <p className="mt-4 text-slate-700 font-medium">{error || "Page data missing"}</p>
           <div className="mt-6 text-xs bg-slate-50 p-4 rounded-lg border border-slate-200">
             <p className="font-bold text-slate-500 uppercase tracking-wider mb-2">Development Tip:</p>
-            Check if your Supabase row has the correct <strong>slug</strong> and <strong>page_type</strong>.
+            Verify that your Supabase row has the correct <strong>slug</strong> and that <strong>page_type</strong> is set correctly.
           </div>
           <a href="/" className="mt-6 inline-block text-blue-600 hover:underline text-sm font-semibold">
             &larr; Return Home
@@ -79,7 +79,7 @@ export default function DynamicPage() {
     );
   }
 
-  // Switch between templates based on the page_type column
+  // Route to the correct template based on the page_type column
   switch (page.page_type) {
     case "home":
       return <HomeTemplate data={page} sections={sections} />;
