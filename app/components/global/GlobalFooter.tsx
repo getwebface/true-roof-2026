@@ -113,11 +113,11 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs text-white/40">
-                Operational Hours: 24/7 Emergency Dispatch
+                Operational Hours: 10am-4pm AEST Business Hours
               </span>
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs text-emerald-400">Live Support</span>
+                <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                <span className="text-xs text-orange-400">Available Now</span>
               </div>
             </div>
           </div>
