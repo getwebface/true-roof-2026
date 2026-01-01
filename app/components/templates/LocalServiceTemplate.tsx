@@ -20,6 +20,8 @@ AnimatePresence,
 } from 'framer-motion';
 import clsx from 'clsx';
 import { CORE_SERVICES } from '~/constants/services';
+import { trackConversion } from '~/lib/tracking/behaviorTracker';
+import HeadlessForm from '~/components/forms/HeadlessForm';
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -450,6 +452,8 @@ setFormState(p => ({ ...p, loading: true }));
 await new Promise(r => setTimeout(r, 1500));
 setFormState(p => ({ ...p, loading: false, submitted: true }));
 console.log('Lead captured:', formState.data);
+// Track conversion
+trackConversion('lead_capture_form', 'submit_success', 1);
 };
 
 // Safe data access with fallbacks
@@ -476,8 +480,8 @@ const safeLeadCapture = leadCapture ?? {
 const safeData = data ?? fallbackSiteData;
 const serviceStatus = safeSection?.service_status ?? fallbackServiceStatus;
 
-return (
-<section className="relative min-h-[90vh] flex items-center bg-slate-950 pt-24 pb-12 overflow-hidden">
+  return (
+    <section className="relative min-h-[90vh] flex items-center bg-slate-950 pt-24 pb-12 overflow-hidden" data-component-id="local-service-hero">
 <MapTextureBackground />
 <NoiseOverlay opacity={0.04} />
 
@@ -680,7 +684,7 @@ const LocalIntelSection: React.FC<{ section?: LocalIntelSection; data?: SiteData
   const safeData = data ?? fallbackSiteData;
 
   return (
-    <section className="py-24 bg-slate-50 border-b border-slate-200">
+    <section className="py-24 bg-slate-50 border-b border-slate-200" data-component-id="local-intel">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
@@ -786,7 +790,7 @@ const TechnicianLogSection: React.FC<{ section?: TechnicianLogSection; data?: Si
   const safeData = data ?? fallbackSiteData;
 
   return (
-    <section className="py-24 bg-slate-950 relative overflow-hidden">
+    <section className="py-24 bg-slate-950 relative overflow-hidden" data-component-id="technician-log">
       <MapTextureBackground />
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
@@ -883,7 +887,7 @@ const ServicesSection: React.FC<{ section?: ServicesSection; data?: SiteData }> 
   const safeData = data ?? fallbackSiteData;
 
   return (
-    <section className="py-24 bg-white" id="services">
+    <section className="py-24 bg-white" id="services" data-component-id="local-services">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{safeSection.headline}</h2>
@@ -952,8 +956,8 @@ const ServicesSection: React.FC<{ section?: ServicesSection; data?: SiteData }> 
 // SOCIAL PROOF (Localized)
 // ============================================================================
 const SocialProofSection: React.FC<{ section: SocialProofSection; data: SiteData }> = ({ section, data }) => {
-return (
-<section className="py-24 bg-slate-50 border-t border-slate-200">
+  return (
+    <section className="py-24 bg-slate-50 border-t border-slate-200" data-component-id="social-proof">
 <div className="max-w-7xl mx-auto px-6">
 <div className="grid lg:grid-cols-2 gap-16 items-center">
 {/* Stats Column */}
@@ -1144,7 +1148,7 @@ export default function LocalServiceTemplate({ data, sections }: LocalServiceTem
         <SocialProofSection section={safeSections.social_proof} data={safeData} />
         
         {/* Priority Service Footer */}
-        <section className="bg-orange-600 py-12 relative overflow-hidden">
+        <section className="bg-orange-600 py-12 relative overflow-hidden" data-component-id="emergency-cta">
           <NoiseOverlay opacity={0.05} />
           <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
             <h2 className="text-3xl font-bold text-white mb-4">{safeSections.emergency.headline}</h2>
@@ -1159,6 +1163,30 @@ export default function LocalServiceTemplate({ data, sections }: LocalServiceTem
                 </span>
               ))}
             </div>
+          </div>
+        </section>
+        
+        {/* Headless Form Section */}
+        <section className="py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" data-component-id="local-service-form">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="mb-16 text-center">
+              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl lg:text-6xl">
+                Get Your Local Roofing Assessment
+              </h2>
+              <p className="mx-auto max-w-2xl text-lg text-white/60">
+                Tell us about your specific roofing needs in {safeData.location?.suburb ?? 'your area'} and we'll provide a personalized quote
+              </p>
+            </div>
+            
+            <HeadlessForm 
+              formId="local_service_form"
+              title={`${safeData.location?.suburb ?? 'Local'} Roofing Quote`}
+              subtitle="Fill out this form to get a detailed quote for your specific roofing needs"
+              submitText="Get Local Quote"
+              successMessage={`Thank you! Our ${safeData.location?.suburb ?? 'local'} team will review your request and contact you with a detailed quote.`}
+              trackingPrefix="local_service_form"
+              variant="gradient"
+            />
           </div>
         </section>
       </main>

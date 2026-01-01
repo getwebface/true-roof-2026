@@ -3,9 +3,27 @@
 
 export default {
   async fetch(request, env, ctx) {
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    // Handle preflight OPTIONS requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { 
+        headers: corsHeaders,
+        status: 204 
+      });
+    }
+
     // Only accept POST requests
     if (request.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { 
+        headers: corsHeaders,
+        status: 405 
+      });
     }
 
     try {
@@ -13,7 +31,10 @@ export default {
       
       // Validate required fields
       if (!data.sessionId || !data.events || !Array.isArray(data.events)) {
-        return new Response('Invalid request: missing sessionId or events array', { status: 400 });
+        return new Response('Invalid request: missing sessionId or events array', { 
+          headers: corsHeaders,
+          status: 400 
+        });
       }
 
       // Initialize Supabase client
@@ -21,7 +42,10 @@ export default {
       const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
-        return new Response('Server configuration error', { status: 500 });
+        return new Response('Server configuration error', { 
+          headers: corsHeaders,
+          status: 500 
+        });
       }
 
       const { createClient } = await import('@supabase/supabase-js');
@@ -145,7 +169,10 @@ export default {
         processed: data.events.length,
         sessionId: data.sessionId 
       }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
         status: 200
       });
 
@@ -157,7 +184,10 @@ export default {
         success: false, 
         error: 'Internal server error' 
       }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
         status: 500
       });
     }

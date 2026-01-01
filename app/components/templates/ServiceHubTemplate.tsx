@@ -24,6 +24,7 @@ import {
   LayoutGroup,
 } from 'framer-motion';
 import clsx from 'clsx';
+import HeadlessForm from '~/components/forms/HeadlessForm';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -428,6 +429,7 @@ const ServiceHubHero: React.FC<{ section: HeroSection; data: SiteData }> = ({
   return (
     <section
       ref={containerRef}
+      data-component-id="service-hub-hero"
       className="relative min-h-[70vh] overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
     >
       {/* Grid Background */}
@@ -1185,7 +1187,7 @@ const ServicesGridSection: React.FC<{
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
 
   return (
-    <section ref={containerRef} className="bg-slate-50 py-16">
+    <section ref={containerRef} className="bg-slate-50 py-16" data-component-id="services-grid">
       <div className="mx-auto max-w-7xl px-6">
         {/* Section Header */}
         <motion.div
@@ -1294,6 +1296,7 @@ const ComparisonSection: React.FC<{ section: Sections['comparison'] }> = ({ sect
     <section
       ref={containerRef}
       className="bg-gradient-to-b from-slate-50 to-white py-24"
+      data-component-id="service-comparison"
     >
       <div className="mx-auto max-w-7xl px-6">
         <motion.div
@@ -1467,6 +1470,7 @@ const TechSpecsSection: React.FC<{ section: Sections['tech_specs'] }> = ({ secti
     <section
       ref={containerRef}
       className="bg-gradient-to-b from-slate-900 to-slate-950 py-24"
+      data-component-id="tech-specs"
     >
       <NoiseOverlay opacity={0.03} />
 
@@ -1658,7 +1662,7 @@ const ProcessSection: React.FC<{ section: Sections['process'] }> = ({ section })
   }, [section.steps.length]);
 
   return (
-    <section ref={containerRef} className="bg-white py-24">
+    <section ref={containerRef} className="bg-white py-24" data-component-id="service-process">
       <div className="mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -1763,6 +1767,7 @@ const CTASection: React.FC<{ section: Sections['cta']; data: SiteData }> = ({ se
     <section
       ref={containerRef}
       className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 py-24"
+      data-component-id="service-cta"
     >
       <NoiseOverlay opacity={0.05} />
 
@@ -2021,6 +2026,30 @@ export default function ServiceHubTemplate({ data, sections }: ServiceHubTemplat
         <TechSpecsSection section={sections.tech_specs} />
 
         <CTASection section={sections.cta} data={data} />
+        
+        {/* Headless Form Section */}
+        <section className="py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" data-component-id="service-hub-form">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="mb-16 text-center">
+              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl lg:text-6xl">
+                Get Your Service Quote
+              </h2>
+              <p className="mx-auto max-w-2xl text-lg text-white/60">
+                Tell us about your specific roofing needs and we'll provide a detailed quote
+              </p>
+            </div>
+            
+            <HeadlessForm 
+              formId="service_hub_form"
+              title="Request Service Quote"
+              subtitle="Fill out this form to get a personalized quote for your specific roofing needs"
+              submitText="Get Quote"
+              successMessage="Thank you! Our team will review your request and contact you with a detailed quote."
+              trackingPrefix="service_hub_form"
+              variant="gradient"
+            />
+          </div>
+        </section>
       </main>
     </div>
   );

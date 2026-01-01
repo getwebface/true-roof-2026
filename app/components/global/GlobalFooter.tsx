@@ -22,6 +22,7 @@ const GlobalFooter: React.FC<GlobalFooterProps> = ({ className }) => {
 
   return (
     <motion.footer
+      data-component-id="global-footer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}

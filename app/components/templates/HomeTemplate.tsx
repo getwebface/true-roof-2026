@@ -14,6 +14,7 @@ import React, {
   useContext,
 } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, AnimatePresence } from 'framer-motion';
+import HeadlessForm from '~/components/forms/HeadlessForm';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -439,6 +440,7 @@ const HeroSection: React.FC<{ section: HeroSection; data: SiteData }> = ({ secti
   return (
     <section 
       ref={containerRef}
+      data-component-id="hero-section"
       className="relative min-h-[100vh] overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
     >
       {/* Animated Background Grid */}
@@ -698,7 +700,7 @@ const BentoGridSection: React.FC<{
   };
   
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32" data-component-id="bento-grid">
       <NoiseOverlay />
       
       {/* Background Elements */}
@@ -843,7 +845,7 @@ const BeforeAfterSection: React.FC<{ section: Sections['before_after'] }> = ({ s
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
   
   return (
-    <section className="relative overflow-hidden bg-white py-32">
+    <section className="relative overflow-hidden bg-white py-32" data-component-id="before-after-slider">
       <div ref={containerRef} className="relative z-10 mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -930,7 +932,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
   };
   
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32" data-component-id="service-map">
       <NoiseOverlay />
       
       <div ref={containerRef} className="relative z-10 mx-auto max-w-7xl px-6">
@@ -1118,7 +1120,7 @@ const TestimonialsSection: React.FC<{ section: Sections['testimonials'] }> = ({ 
   };
   
   return (
-    <section className="relative overflow-hidden bg-white py-32">
+    <section className="relative overflow-hidden bg-white py-32" data-component-id="testimonials">
       {/* Decorative Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -right-1/4 top-0 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-orange-100 to-red-50 blur-3xl" />
@@ -1314,7 +1316,7 @@ const ProcessSection: React.FC<{ section: Sections['process'] }> = ({ section })
   }, [section.steps.length]);
   
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32" data-component-id="process-timeline">
       <NoiseOverlay />
       
       {/* Animated Lines Background */}
@@ -1430,7 +1432,7 @@ const ServicesSection: React.FC<{ section: Sections['services'] }> = ({ section 
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
   
   return (
-    <section className="relative overflow-hidden bg-white py-32">
+    <section className="relative overflow-hidden bg-white py-32" data-component-id="services-highlight">
       <div ref={containerRef} className="relative z-10 mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -1613,7 +1615,7 @@ const FAQSection: React.FC<{ section: Sections['faq'] }> = ({ section }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-32" data-component-id="faq-section">
       <NoiseOverlay />
       
       <div ref={containerRef} className="relative z-10 mx-auto max-w-4xl px-6">
@@ -1720,7 +1722,7 @@ const FinalCTASection: React.FC<{ section: Sections['final_cta']; data: SiteData
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
   
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-orange-600 via-red-600 to-orange-700 py-32">
+    <section className="relative overflow-hidden bg-gradient-to-br from-orange-600 via-red-600 to-orange-700 py-32" data-component-id="final-cta">
       <NoiseOverlay opacity={0.05} />
       
       {/* Animated Background Elements */}
@@ -1955,6 +1957,28 @@ export default function HomeTemplate({ data, sections }: HomeTemplateProps) {
           <ServicesSection section={sections.services} />
           <FAQSection section={sections.faq} />
           <FinalCTASection section={sections.final_cta} data={data} />
+          
+          {/* Headless Form Section */}
+          <section className="py-32 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" data-component-id="headless-form-section">
+            <div className="max-w-4xl mx-auto px-6">
+              <div className="mb-16 text-center">
+                <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl lg:text-6xl">
+                  Get Your Free Roofing Assessment
+                </h2>
+                <p className="mx-auto max-w-2xl text-lg text-white/60">
+                  Complete the form below and our team will contact you within 24 hours
+                </p>
+              </div>
+              
+              <HeadlessForm 
+                formId="homepage_lead_form"
+                title="Schedule Your Free Inspection"
+                subtitle="Fill out this quick form and we'll call you to arrange a convenient time"
+                trackingPrefix="homepage_form"
+                variant="gradient"
+              />
+            </div>
+          </section>
         </main>
         
         {/* Footer would go here */}

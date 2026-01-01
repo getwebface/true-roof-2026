@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { trackEvent } from '~/lib/tracking/behaviorTracker';
 
 interface StickyCallButtonProps {
   phoneNumber?: string;
@@ -70,9 +71,11 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
           )}
         >
           <motion.a
+            data-component-id="sticky-call-button"
             href={`tel:${phoneNumber}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={() => trackEvent('call_button_click', { location: 'sticky_footer' })}
             className={cn(
               'relative flex items-center gap-3',
               'px-6 py-4 rounded-full shadow-2xl',
