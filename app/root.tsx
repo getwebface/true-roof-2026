@@ -43,7 +43,7 @@ export default function App() {
   useEffect(() => {
     initBehaviorTracker({
       // 👇 PASTE YOUR CLOUDFLARE WORKER URL HERE
-      beaconEndpoint: 'beacon-ingest.josh-f96.workers.dev', 
+      beaconEndpoint: 'https://beacon-ingest.josh-f96.workers.dev', 
       
       sampleRate: 1.0,
       debug: import.meta.env.DEV // Enables logs only in development
