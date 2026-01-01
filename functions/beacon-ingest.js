@@ -1,194 +1,195 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Standard CORS headers for all responses
+// CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-  'Access-Control-Max-Age': '86400',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-export default {
-  async fetch(request, env, ctx) {
-    // 1. Handle the Preflight (OPTIONS) request specifically
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: corsHeaders,
-        status: 204,
-      });
-    }
+// Handle all requests (POST and OPTIONS) to this route
+export const onRequest = async ({ request, env }) => {
+  // 1. Handle preflight OPTIONS requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204 
+    });
+  }
 
-    // 2. Only allow POST for the actual data processing
-    if (request.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+  // 2. Only accept POST requests for actual processing
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { 
+      headers: corsHeaders,
+      status: 405 
+    });
+  }
+
+  try {
+    const data = await request.json();
+    
+    // 3. Validate required fields
+    if (!data.sessionId || !data.events || !Array.isArray(data.events)) {
+      return new Response('Invalid request: missing sessionId or events array', { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 405,
+        status: 400 
       });
     }
 
-    try {
-      const data = await request.json();
-      
-      // 3. Validation
-      if (!data.sessionId || !data.events || !Array.isArray(data.events)) {
-        return new Response(JSON.stringify({ error: 'Invalid request: missing sessionId or events array' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        });
-      }
+    // 4. Initialize Supabase client
+    const supabaseUrl = env.SUPABASE_URL;
+    const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response('Server configuration error', { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      });
+    }
 
-      // 4. Initialize Supabase
-      const supabaseUrl = env.SUPABASE_URL;
-      const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        // Return JSON error so frontend sees it, rather than a generic network error
-        return new Response(JSON.stringify({ error: 'Server configuration error: Missing Supabase credentials' }), { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        });
-      }
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const supabase = createClient(supabaseUrl, supabaseKey);
+    // 5. Process session data
+    const sessionData = {
+      session_id: data.sessionId,
+      user_agent: data.metadata?.userAgent || null,
+      referrer: data.metadata?.referrer || null,
+      landing_page: data.events[0]?.pageUrl || request.headers.get('Referer') || 'unknown',
+      device_type: getDeviceType(data.metadata?.userAgent),
+      screen_resolution: data.metadata?.screenResolution || null,
+      language: data.metadata?.language || null,
+      country_code: request.cf?.country || null,
+      created_at: new Date().toISOString()
+    };
 
-      // 5. Process session data
-      const sessionData = {
+    // Insert or update session
+    const { error: sessionError } = await supabase
+      .from('user_sessions')
+      .upsert(sessionData, {
+        onConflict: 'session_id',
+        ignoreDuplicates: false
+      });
+
+    if (sessionError) {
+      console.error('Session upsert error:', sessionError);
+    }
+
+    // 6. Process events in batches
+    const batchSize = 50;
+    const eventBatches = [];
+    
+    for (let i = 0; i < data.events.length; i += batchSize) {
+      eventBatches.push(data.events.slice(i, i + batchSize));
+    }
+
+    const eventPromises = eventBatches.map(async (batch) => {
+      const eventsToInsert = batch.map(event => ({
         session_id: data.sessionId,
-        user_agent: data.metadata?.userAgent || null,
-        referrer: data.metadata?.referrer || null,
-        landing_page: data.events[0]?.pageUrl || request.headers.get('Referer') || 'unknown',
-        device_type: getDeviceType(data.metadata?.userAgent),
-        screen_resolution: data.metadata?.screenResolution || null,
-        language: data.metadata?.language || null,
-        country_code: request.cf?.country || null,
-        created_at: new Date().toISOString()
-      };
+        event_type: event.eventType,
+        element_path: event.elementPath || null,
+        element_type: event.elementType || null,
+        element_text: event.elementText || null,
+        coordinates: event.coordinates || null,
+        viewport_size: event.viewportSize || null,
+        event_data: event.eventData || {},
+        timestamp: new Date(event.timestamp).toISOString(),
+        page_url: event.pageUrl,
+        component_id: event.componentId || null,
+        metadata: {
+          user_agent: data.metadata?.userAgent,
+          screen_resolution: data.metadata?.screenResolution,
+          language: data.metadata?.language,
+          timezone: data.metadata?.timezone,
+          page_load_time: data.metadata?.pageLoadTime || 0
+        }
+      }));
 
-      // Upsert Session
-      const { error: sessionError } = await supabase
-        .from('user_sessions')
-        .upsert(sessionData, {
-          onConflict: 'session_id',
-          ignoreDuplicates: false
-        });
+      const { error: eventsError } = await supabase
+        .from('behavior_events')
+        .insert(eventsToInsert);
 
-      if (sessionError) {
-        console.error('Session upsert error:', sessionError);
+      if (eventsError) {
+        console.error('Events insert error:', eventsError);
+        throw eventsError;
       }
+    });
 
-      // 6. Process events in batches
-      const batchSize = 50;
-      const eventBatches = [];
-      
-      for (let i = 0; i < data.events.length; i += batchSize) {
-        eventBatches.push(data.events.slice(i, i + batchSize));
-      }
+    // 7. Process conversion events separately
+    const conversionEvents = data.events.filter(e => e.eventType === 'conversion_step');
+    if (conversionEvents.length > 0) {
+      const conversionPromises = conversionEvents.map(async (event) => {
+        const { error: conversionError } = await supabase
+          .from('conversion_funnels')
+          .upsert({
+            session_id: data.sessionId,
+            funnel_name: event.eventData.funnelName,
+            step_name: event.eventData.stepName,
+            step_order: event.eventData.stepOrder,
+            entered_at: new Date(event.timestamp).toISOString(),
+            metadata: event.eventData
+          }, {
+            onConflict: 'session_id,funnel_name,step_order'
+          });
 
-      const eventPromises = eventBatches.map(async (batch) => {
-        const eventsToInsert = batch.map(event => ({
-          session_id: data.sessionId,
-          event_type: event.eventType,
-          element_path: event.elementPath || null,
-          element_type: event.elementType || null,
-          element_text: event.elementText || null,
-          coordinates: event.coordinates || null,
-          viewport_size: event.viewportSize || null,
-          event_data: event.eventData || {},
-          timestamp: new Date(event.timestamp).toISOString(),
-          page_url: event.pageUrl,
-          component_id: event.componentId || null,
-          metadata: {
-            user_agent: data.metadata?.userAgent,
-            screen_resolution: data.metadata?.screenResolution,
-            language: data.metadata?.language,
-            timezone: data.metadata?.timezone,
-            page_load_time: data.metadata?.pageLoadTime || 0
-          }
-        }));
-
-        const { error: eventsError } = await supabase
-          .from('behavior_events')
-          .insert(eventsToInsert);
-
-        if (eventsError) {
-          console.error('Events insert error:', eventsError);
-          throw eventsError;
+        if (conversionError) {
+          console.error('Conversion insert error:', conversionError);
         }
       });
 
-      // 7. Process conversions
-      const conversionEvents = data.events.filter(e => e.eventType === 'conversion_step');
-      if (conversionEvents.length > 0) {
-        const conversionPromises = conversionEvents.map(async (event) => {
-          const { error: conversionError } = await supabase
-            .from('conversion_funnels')
-            .upsert({
-              session_id: data.sessionId,
-              funnel_name: event.eventData.funnelName,
-              step_name: event.eventData.stepName,
-              step_order: event.eventData.stepOrder,
-              entered_at: new Date(event.timestamp).toISOString(),
-              metadata: event.eventData
-            }, {
-              onConflict: 'session_id,funnel_name,step_order'
-            });
-
-          if (conversionError) {
-            console.error('Conversion insert error:', conversionError);
-          }
-        });
-
-        await Promise.allSettled(conversionPromises);
-      }
-
-      await Promise.allSettled(eventPromises);
-
-      // 8. Process Session End
-      const sessionEndEvent = data.events.find(e => e.eventType === 'session_end');
-      if (sessionEndEvent) {
-        const { error: updateError } = await supabase
-          .from('user_sessions')
-          .update({
-            exit_page: sessionEndEvent.pageUrl,
-            exit_reason: 'navigation',
-            duration_seconds: Math.floor(sessionEndEvent.eventData.durationMs / 1000),
-            page_count: sessionEndEvent.eventData.pageCount,
-            updated_at: new Date().toISOString()
-          })
-          .eq('session_id', data.sessionId);
-
-        if (updateError) {
-          console.error('Session update error:', updateError);
-        }
-      }
-
-      // Success Response
-      return new Response(JSON.stringify({ 
-        success: true, 
-        processed: data.events.length,
-        sessionId: data.sessionId 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      });
-
-    } catch (error) {
-      console.error('Beacon ingestion error:', error);
-      
-      // Return 500 error WITH CORS headers so browser shows the actual error message
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Internal server error',
-        details: error.message 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      });
+      await Promise.allSettled(conversionPromises);
     }
+
+    // Wait for all event batches
+    await Promise.allSettled(eventPromises);
+
+    // 8. Process Session End
+    const sessionEndEvent = data.events.find(e => e.eventType === 'session_end');
+    if (sessionEndEvent) {
+      const { error: updateError } = await supabase
+        .from('user_sessions')
+        .update({
+          exit_page: sessionEndEvent.pageUrl,
+          exit_reason: 'navigation',
+          duration_seconds: Math.floor(sessionEndEvent.eventData.durationMs / 1000),
+          page_count: sessionEndEvent.eventData.pageCount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('session_id', data.sessionId);
+
+      if (updateError) {
+        console.error('Session update error:', updateError);
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      processed: data.events.length,
+      sessionId: data.sessionId 
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 200
+    });
+
+  } catch (error) {
+    console.error('Beacon ingestion error:', error);
+    
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Internal server error' 
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 500
+    });
   }
 };
 
-// Helper function to determine device type from user agent
+// Helper function
 function getDeviceType(userAgent) {
   if (!userAgent) return 'desktop';
   
