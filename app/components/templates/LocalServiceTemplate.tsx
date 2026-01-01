@@ -193,42 +193,109 @@ sections: Sections;
 // ============================================================================
 // SEO HELPER: SCHEMA.ORG JSON-LD
 // ============================================================================
-const LocalBusinessSchema: React.FC<{ data: SiteData }> = ({ data }) => {
+const LocalBusinessSchema: React.FC<{ data?: SiteData }> = ({ data }) => {
+  // Safe data access with fallbacks
+  const safeData = data ?? fallbackSiteData;
+  
   const schema = {
     "@context": "https://schema.org",
     "@type": "HomeAndConstructionBusiness",
-    "name": data.site_name,
-    "image": data.logo_url,
-    "telephone": data.phone,
-    "email": data.email,
-    "url": data.website_url,
+    "name": safeData.site_name,
+    "image": safeData.logo_url,
+    "telephone": safeData.phone,
+    "email": safeData.email,
+    "url": safeData.website_url,
     "address": {
       "@type": "PostalAddress",
-      "addressLocality": data.location.suburb,
-      "addressRegion": data.location.state,
-      "postalCode": data.location.postcode,
+      "addressLocality": safeData.location?.suburb ?? 'Local Area',
+      "addressRegion": safeData.location?.state ?? '',
+      "postalCode": safeData.location?.postcode ?? '',
       "addressCountry": "AU"
     },
     "areaServed": {
       "@type": "GeoCircle",
       "geoMidpoint": {
         "@type": "GeoCoordinates",
-        "latitude": data.location.latitude || -37.8136,
-        "longitude": data.location.longitude || 144.9631
+        "latitude": safeData.location?.latitude ?? -37.8136,
+        "longitude": safeData.location?.longitude ?? 144.9631
       },
-      // Ensure math is wrapped in parentheses correctly
-      "geoRadius": (data.location.service_radius_km || 25) * 1000
+      // Ensure math is wrapped in parentheses correctly with null safety
+      "geoRadius": ((safeData.location?.service_radius_km ?? 25) * 1000)
     },
     "priceRange": "$"
   };
 
+  // Use useEffect to safely set script content on client side
+  const scriptRef = useRef<HTMLScriptElement>(null);
+  
+  useEffect(() => {
+    if (scriptRef.current) {
+      scriptRef.current.textContent = JSON.stringify(schema);
+    }
+  }, [schema]);
+
   return (
     <script
+      ref={scriptRef}
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // Empty content initially, populated via useEffect
     />
   );
 };
+// ============================================================================
+// SKELETON LOADER & NULL-SAFETY UTILITIES
+// ============================================================================
+const SkeletonLoader: React.FC = () => (
+  <div className="min-h-screen bg-slate-50 animate-pulse">
+    <div className="h-24 bg-slate-200"></div>
+    <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+      <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <div className="h-6 bg-slate-200 rounded w-3/4"></div>
+          <div className="h-4 bg-slate-200 rounded w-full"></div>
+          <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+        </div>
+        <div className="h-64 bg-slate-200 rounded"></div>
+      </div>
+    </div>
+  </div>
+);
+
+// Safe data access utilities
+const safeGet = <T,>(obj: any, path: string, defaultValue: T): T => {
+  return path.split('.').reduce((acc, key) => acc?.[key], obj) ?? defaultValue;
+};
+
+// Type-safe fallback values
+const fallbackServiceStatus = {
+  status: 'available' as const,
+  teams_available: 0,
+  last_inspection_completed: 'N/A',
+  next_available_slot: 'N/A',
+  availability_today: 0,
+  estimated_wait_time: 'N/A'
+};
+
+const fallbackSiteData: SiteData = {
+  site_name: 'Service Provider',
+  tagline: '',
+  phone: '',
+  email: '',
+  logo_url: '',
+  website_url: '',
+  location: {
+    suburb: 'Local Area',
+    region: '',
+    postcode: '',
+    state: '',
+    service_radius_km: 25,
+    latitude: undefined,
+    longitude: undefined
+  }
+};
+
 // ============================================================================
 // REUSABLE COMPONENTS
 // ============================================================================
@@ -256,9 +323,9 @@ const MapTextureBackground: React.FC = () => (
 </svg>
 </div>
 );
-// Service Status Indicator
+// Service Status Indicator with null-safety
 const ServiceStatusIndicator: React.FC<{
-status: 'available' | 'limited' | 'booked';
+status?: 'available' | 'limited' | 'booked';
 size?: 'sm' | 'md' | 'lg';
 showLabel?: boolean;
 }> = ({ status, size = 'md', showLabel = true }) => {
@@ -267,7 +334,7 @@ available: { color: 'bg-orange-500', label: 'Available', pulseColor: 'bg-orange-
 limited: { color: 'bg-amber-500', label: 'Limited', pulseColor: 'bg-amber-400' },
 booked: { color: 'bg-slate-500', label: 'Booked', pulseColor: 'bg-slate-400' },
 };
-const config = statusConfig[status];
+const config = status ? statusConfig[status] : { color: 'bg-slate-500', label: 'Unknown', pulseColor: 'bg-slate-400' };
 const sizeClass = size === 'sm' ? 'h-2 w-2' : size === 'md' ? 'h-3 w-3' : 'h-4 w-4';
 return (
 <div className="flex items-center gap-2">
@@ -371,9 +438,9 @@ return <span ref={ref}>{display}{suffix}</span>;
 // SECTIONS
 // ============================================================================
 const HeroSection: React.FC<{
-section: HeroSection;
-leadCapture: LeadCaptureSection;
-data: SiteData;
+section?: HeroSection;
+leadCapture?: LeadCaptureSection;
+data?: SiteData;
 }> = ({ section, leadCapture, data }) => {
 const [formState, setFormState] = useState({ loading: false, submitted: false, data: {} as any });
 const handleSubmit = async (e: React.FormEvent) => {
@@ -384,6 +451,31 @@ await new Promise(r => setTimeout(r, 1500));
 setFormState(p => ({ ...p, loading: false, submitted: true }));
 console.log('Lead captured:', formState.data);
 };
+
+// Safe data access with fallbacks
+const safeSection = section ?? {
+  headline: 'Local Roofing Services',
+  headline_location: 'Your Area',
+  subheadline: 'Professional roofing solutions for your community',
+  service_status: fallbackServiceStatus,
+  trust_signals: ['Licensed & Insured', 'Free Quotes', 'Same-Day Service'],
+  service_notice: undefined,
+  weather_alert: undefined
+};
+
+const safeLeadCapture = leadCapture ?? {
+  headline: 'Get Your Free Quote',
+  subheadline: 'Schedule your inspection today',
+  form_fields: [],
+  submit_text: 'Request Quote',
+  privacy_text: 'Your information is secure',
+  urgency_text: undefined,
+  guarantee_badge: undefined
+};
+
+const safeData = data ?? fallbackSiteData;
+const serviceStatus = safeSection?.service_status ?? fallbackServiceStatus;
+
 return (
 <section className="relative min-h-[90vh] flex items-center bg-slate-950 pt-24 pb-12 overflow-hidden">
 <MapTextureBackground />
@@ -399,20 +491,20 @@ return (
   <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
     {/* Weather Alert Banner */}
     <AnimatePresence>
-      {section.weather_alert?.active && (
+      {safeSection?.weather_alert?.active && (
         <motion.div 
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           className={clsx(
             "mb-8 rounded-lg border px-4 py-3 flex items-center gap-3",
-            section.weather_alert.severity === 'danger' ? "bg-red-500/20 border-red-500/30 text-red-200" :
-            section.weather_alert.severity === 'warning' ? "bg-amber-500/20 border-amber-500/30 text-amber-200" :
+            safeSection.weather_alert.severity === 'danger' ? "bg-red-500/20 border-red-500/30 text-red-200" :
+            safeSection.weather_alert.severity === 'warning' ? "bg-amber-500/20 border-amber-500/30 text-amber-200" :
             "bg-blue-500/20 border-blue-500/30 text-blue-200"
           )}
         >
           <span className="text-xl">⚠️</span>
           <p className="text-sm font-medium">
-            <strong>{section.weather_alert.type}:</strong> {section.weather_alert.message}
+            <strong>{safeSection.weather_alert.type}:</strong> {safeSection.weather_alert.message}
           </p>
         </motion.div>
       )}
@@ -427,42 +519,42 @@ return (
       >
         {/* Status Pill */}
         <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-4 py-2 mb-8 backdrop-blur-md">
-          <ServiceStatusIndicator status={section.service_status.status} />
+          <ServiceStatusIndicator status={serviceStatus?.status} />
           <span className="w-px h-4 bg-white/20" />
           <span className="text-sm text-white/60">
-            {section.service_status.teams_available} Teams in {data.location.suburb}
+            {serviceStatus?.teams_available ?? 0} Teams in {safeData?.location?.suburb ?? 'Local Area'}
           </span>
         </div>
 
         <h1 className="text-5xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 tracking-tight">
-          {section.headline}
+          {safeSection?.headline ?? 'Local Roofing Services'}
           <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-500">
-            {section.headline_location}
+            {safeSection?.headline_location ?? 'Your Area'}
           </span>
         </h1>
 
         <p className="text-xl text-slate-400 mb-10 max-w-lg leading-relaxed">
-          {section.subheadline}
+          {safeSection?.subheadline ?? 'Professional roofing solutions for your community'}
         </p>
 
         {/* Service Metrics Panel */}
         <div className="grid grid-cols-2 gap-4 mb-10">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="text-2xl font-bold text-white mb-1">
-              {section.service_status.estimated_wait_time}
+              {serviceStatus?.estimated_wait_time ?? 'N/A'}
             </div>
             <div className="text-xs text-white/50 uppercase tracking-wider">Next Available</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="text-2xl font-bold text-orange-400 mb-1">
-              {section.service_status.availability_today}
+              {serviceStatus?.availability_today ?? 0}
             </div>
             <div className="text-xs text-white/50 uppercase tracking-wider">Inspections Today</div>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {section.trust_signals.map((signal, i) => (
+          {(safeSection?.trust_signals ?? []).map((signal, i) => (
             <span key={i} className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-800">
               <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -485,15 +577,15 @@ return (
             {/* Form Header */}
             <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/10">
               <div>
-                <h2 className="text-xl font-bold text-white">{leadCapture.headline}</h2>
-                <p className="text-sm text-slate-400 mt-1">{leadCapture.subheadline}</p>
+                <h2 className="text-xl font-bold text-white">{safeLeadCapture.headline}</h2>
+                <p className="text-sm text-slate-400 mt-1">{safeLeadCapture.subheadline}</p>
               </div>
               <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
             </div>
 
             {!formState.submitted ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {leadCapture.form_fields.map((field) => (
+                {(safeLeadCapture.form_fields ?? []).map((field) => (
                   <div key={field.id}>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                       {field.label} {field.required && <span className="text-red-400">*</span>}
@@ -505,7 +597,7 @@ return (
                         onChange={e => setFormState(p => ({ ...p, data: { ...p.data, [field.id]: e.target.value } }))}
                       >
                         <option value="">{field.placeholder}</option>
-                        {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        {(field.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     ) : field.type === 'textarea' ? (
                       <textarea 
@@ -527,12 +619,12 @@ return (
                   </div>
                 ))}
                 
-                {leadCapture.urgency_text && (
+                {safeLeadCapture.urgency_text && (
                   <div className="flex items-center gap-2 text-amber-400 text-sm py-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {leadCapture.urgency_text}
+                    {safeLeadCapture.urgency_text}
                   </div>
                 )}
 
@@ -541,11 +633,11 @@ return (
                   fullWidth 
                   disabled={formState.loading}
                 >
-                  {formState.loading ? 'Processing...' : leadCapture.submit_text}
+                  {formState.loading ? 'Processing...' : safeLeadCapture.submit_text}
                 </MagneticButton>
 
                 <p className="text-center text-xs text-slate-500 mt-4">
-                  {leadCapture.privacy_text}
+                  {safeLeadCapture.privacy_text}
                 </p>
               </form>
             ) : (
@@ -560,7 +652,7 @@ return (
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Request Received</h3>
-                <p className="text-slate-400">Our {data.location.suburb} team will contact you shortly.</p>
+                <p className="text-slate-400">Our {safeData?.location?.suburb ?? 'Local Area'} team will contact you shortly.</p>
               </motion.div>
             )}
           </div>
@@ -574,255 +666,285 @@ return (
 // ============================================================================
 // LOCAL INTEL SECTION (SEO GOLDMINE)
 // ============================================================================
-const LocalIntelSection: React.FC<{ section: LocalIntelSection; data: SiteData }> = ({ section, data }) => {
-return (
-<section className="py-24 bg-slate-50 border-b border-slate-200">
-<div className="max-w-7xl mx-auto px-6">
-<div className="mb-16">
-<h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-{section.headline}
-</h2>
-<p className="text-lg text-slate-600 max-w-2xl">{section.subheadline}</p>
-</div>
+const LocalIntelSection: React.FC<{ section?: LocalIntelSection; data?: SiteData }> = ({ section, data }) => {
+  // Safe data access with fallbacks
+  const safeSection = section ?? {
+    headline: 'Local Area Insights',
+    subheadline: 'Understanding your community\'s roofing needs',
+    stats: [],
+    common_issues: []
+  };
 
-{/* Stats Grid */}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-      {section.stats.map((stat, idx) => (
-        <motion.div
-          key={stat.id}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: idx * 0.1 }}
-          viewport={{ once: true }}
-          className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-2xl">{stat.icon}</span>
-            {stat.trend && (
-              <span className={clsx(
-                "text-xs font-medium px-2 py-1 rounded-full",
-                stat.trend === 'up' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"
-              )}>
-                {stat.trend === 'up' ? '↗' : '→'} {stat.trend_value}
-              </span>
-            )}
-          </div>
-          <div className="text-3xl font-bold text-slate-900 mb-1">
-            <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-          </div>
-          <div className="text-sm text-slate-500 font-medium">{stat.label}</div>
-        </motion.div>
-      ))}
-    </div>
+  const safeData = data ?? fallbackSiteData;
 
-    {/* Common Issues (High SEO Value content) */}
-    <div>
-      <h3 className="text-xl font-bold text-slate-900 mb-8">Common Issues in {data.location.suburb}</h3>
-      <div className="grid md:grid-cols-3 gap-6">
-        {section.common_issues.map((issue, idx) => (
-          <motion.article 
-            key={issue.id}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 + (idx * 0.1) }}
-            viewport={{ once: true }}
-            className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col h-full"
-          >
-            <div className="mb-4">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-bold text-lg text-slate-900">{issue.title}</h4>
-                <span className={clsx(
-                  "text-xs uppercase font-bold px-2 py-1 rounded",
-                  issue.severity === 'high' ? "bg-orange-100 text-orange-700" :
-                  issue.severity === 'critical' ? "bg-red-100 text-red-700" :
-                  "bg-blue-100 text-blue-700"
-                )}>
-                  {issue.severity}
-                </span>
+  return (
+    <section className="py-24 bg-slate-50 border-b border-slate-200">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            {safeSection.headline}
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl">{safeSection.subheadline}</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+          {(safeSection.stats ?? []).map((stat, idx) => (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              viewport={{ once: true }}
+              className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-2xl">{stat.icon}</span>
+                {stat.trend && (
+                  <span className={clsx(
+                    "text-xs font-medium px-2 py-1 rounded-full",
+                    stat.trend === 'up' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"
+                  )}>
+                    {stat.trend === 'up' ? '↗' : '→'} {stat.trend_value}
+                  </span>
+                )}
               </div>
-              <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                {issue.description}
-              </p>
-            </div>
-            
-            <div className="mt-auto space-y-3 pt-4 border-t border-slate-100">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Frequency:</span>
-                <span className="font-medium text-slate-900">{issue.frequency}</span>
+              <div className="text-3xl font-bold text-slate-900 mb-1">
+                <AnimatedCounter value={stat.value} suffix={stat.suffix} />
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Est. Repair:</span>
-                <span className="font-medium text-slate-900">{issue.avg_repair_cost}</span>
-              </div>
-              <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded-lg mt-2">
-                <strong>💡 Pro Tip:</strong> {issue.recommended_action}
-              </div>
-            </div>
-          </motion.article>
-        ))}
+              <div className="text-sm text-slate-500 font-medium">{stat.label}</div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Common Issues (High SEO Value content) */}
+        <div>
+          <h3 className="text-xl font-bold text-slate-900 mb-8">Common Issues in {safeData?.location?.suburb ?? 'Local Area'}</h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            {(safeSection.common_issues ?? []).map((issue, idx) => (
+              <motion.article 
+                key={issue.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + (idx * 0.1) }}
+                viewport={{ once: true }}
+                className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col h-full"
+              >
+                <div className="mb-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold text-lg text-slate-900">{issue.title}</h4>
+                    <span className={clsx(
+                      "text-xs uppercase font-bold px-2 py-1 rounded",
+                      issue.severity === 'high' ? "bg-orange-100 text-orange-700" :
+                      issue.severity === 'critical' ? "bg-red-100 text-red-700" :
+                      "bg-blue-100 text-blue-700"
+                    )}>
+                      {issue.severity}
+                    </span>
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                    {issue.description}
+                  </p>
+                </div>
+                
+                <div className="mt-auto space-y-3 pt-4 border-t border-slate-100">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Frequency:</span>
+                    <span className="font-medium text-slate-900">{issue.frequency}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Est. Repair:</span>
+                    <span className="font-medium text-slate-900">{issue.avg_repair_cost}</span>
+                  </div>
+                  <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded-lg mt-2">
+                    <strong>💡 Pro Tip:</strong> {issue.recommended_action}
+                  </div>
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
-);
+    </section>
+  );
 };
 // ============================================================================
 // TECHNICIAN LOG (E-E-A-T Signal)
 // ============================================================================
-const TechnicianLogSection: React.FC<{ section: TechnicianLogSection; data: SiteData }> = ({ section, data }) => {
-return (
-<section className="py-24 bg-slate-950 relative overflow-hidden">
-<MapTextureBackground />
-<div className="max-w-7xl mx-auto px-6 relative z-10">
-<div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-<div>
-<div className="flex items-center gap-2 text-emerald-500 mb-2 font-mono text-sm uppercase tracking-wider">
-<span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-Field Report
-</div>
-<h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{section.headline}</h2>
-<p className="text-slate-400 max-w-xl">{section.subheadline}</p>
-</div>
-<div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg text-right">
-<div className="text-xs text-slate-500 uppercase">Last Inspection</div>
-<div className="text-white font-mono">{section.last_inspection_date}</div>
-</div>
-</div>
+const TechnicianLogSection: React.FC<{ section?: TechnicianLogSection; data?: SiteData }> = ({ section, data }) => {
+  // Safe data access with fallbacks
+  const safeSection = section ?? {
+    headline: 'Field Technician Reports',
+    subheadline: 'Recent inspections and recommendations',
+    location_summary: 'No recent inspections available',
+    logs: [],
+    last_inspection_date: 'N/A'
+  };
 
-{/* Location Summary */}
-    <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl border border-white/10 mb-12">
-      <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.809-.983L15 7m0 10V7m0 0L9 7" />
-        </svg>
-        Area Analysis: {data.location.suburb}
-      </h3>
-      <p className="text-slate-300 leading-relaxed text-lg">{section.location_summary}</p>
-    </div>
+  const safeData = data ?? fallbackSiteData;
 
-    {/* Logs */}
-    <div className="space-y-6">
-      {section.logs.map((log) => (
-        <motion.div 
-          key={log.id}
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className={clsx(
-            "border-l-4 rounded-r-xl bg-white/5 p-6 md:p-8 backdrop-blur-sm",
-            log.priority === 'urgent' ? "border-red-500" :
-            log.priority === 'recommended' ? "border-amber-500" : "border-emerald-500"
-          )}
-        >
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Tech Info */}
-            <div className="md:w-48 flex-shrink-0">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold">
-                  {log.technician_name.charAt(0)}
-                </div>
-                <div>
-                  <div className="text-white font-medium text-sm">{log.technician_name}</div>
-                  <div className="text-slate-500 text-xs">{log.date}</div>
-                </div>
-              </div>
-              <span className={clsx(
-                "inline-block px-2 py-1 rounded text-xs font-bold uppercase mt-2",
-                log.priority === 'urgent' ? "bg-red-500/20 text-red-400" :
-                log.priority === 'recommended' ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"
-              )}>
-                Priority: {log.priority}
-              </span>
+  return (
+    <section className="py-24 bg-slate-950 relative overflow-hidden">
+      <MapTextureBackground />
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-500 mb-2 font-mono text-sm uppercase tracking-wider">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Field Report
             </div>
-
-            {/* Log Content */}
-            <div className="flex-grow">
-              <div className="mb-4">
-                <h4 className="text-slate-500 text-xs uppercase tracking-wider mb-1">Observation</h4>
-                <p className="text-slate-200">{log.observation}</p>
-              </div>
-              <div className="bg-slate-900/50 p-4 rounded-lg border border-white/5">
-                <h4 className="text-emerald-500 text-xs uppercase tracking-wider mb-1">Recommendation</h4>
-                <p className="text-white text-sm">{log.recommendation}</p>
-              </div>
-            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{safeSection.headline}</h2>
+            <p className="text-slate-400 max-w-xl">{safeSection.subheadline}</p>
           </div>
-        </motion.div>
-      ))}
-    </div>
-  </div>
-</section>
-);
+          <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg text-right">
+            <div className="text-xs text-slate-500 uppercase">Last Inspection</div>
+            <div className="text-white font-mono">{safeSection.last_inspection_date}</div>
+          </div>
+        </div>
+
+        {/* Location Summary */}
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl border border-white/10 mb-12">
+          <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.809-.983L15 7m0 10V7m0 0L9 7" />
+            </svg>
+            Area Analysis: {safeData?.location?.suburb ?? 'Local Area'}
+          </h3>
+          <p className="text-slate-300 leading-relaxed text-lg">{safeSection.location_summary}</p>
+        </div>
+
+        {/* Logs */}
+        <div className="space-y-6">
+          {(safeSection.logs ?? []).map((log) => (
+            <motion.div 
+              key={log.id}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className={clsx(
+                "border-l-4 rounded-r-xl bg-white/5 p-6 md:p-8 backdrop-blur-sm",
+                log.priority === 'urgent' ? "border-red-500" :
+                log.priority === 'recommended' ? "border-amber-500" : "border-emerald-500"
+              )}
+            >
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Tech Info */}
+                <div className="md:w-48 flex-shrink-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold">
+                      {log.technician_name?.charAt(0) ?? 'T'}
+                    </div>
+                    <div>
+                      <div className="text-white font-medium text-sm">{log.technician_name ?? 'Technician'}</div>
+                      <div className="text-slate-500 text-xs">{log.date ?? 'N/A'}</div>
+                    </div>
+                  </div>
+                  <span className={clsx(
+                    "inline-block px-2 py-1 rounded text-xs font-bold uppercase mt-2",
+                    log.priority === 'urgent' ? "bg-red-500/20 text-red-400" :
+                    log.priority === 'recommended' ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"
+                  )}>
+                    Priority: {log.priority ?? 'routine'}
+                  </span>
+                </div>
+
+                {/* Log Content */}
+                <div className="flex-grow">
+                  <div className="mb-4">
+                    <h4 className="text-slate-500 text-xs uppercase tracking-wider mb-1">Observation</h4>
+                    <p className="text-slate-200">{log.observation ?? 'No observation recorded'}</p>
+                  </div>
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-white/5">
+                    <h4 className="text-emerald-500 text-xs uppercase tracking-wider mb-1">Recommendation</h4>
+                    <p className="text-white text-sm">{log.recommendation ?? 'No recommendation provided'}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 };
 // ============================================================================
 // SERVICES (Service Area Pages Logic)
 // ============================================================================
-const ServicesSection: React.FC<{ section: ServicesSection; data: SiteData }> = ({ section, data }) => {
-return (
-<section className="py-24 bg-white" id="services">
-<div className="max-w-7xl mx-auto px-6">
-<div className="text-center mb-16">
-<h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{section.headline}</h2>
-<p className="text-slate-600 max-w-2xl mx-auto">{section.subheadline}</p>
-</div>
+const ServicesSection: React.FC<{ section?: ServicesSection; data?: SiteData }> = ({ section, data }) => {
+  // Safe data access with fallbacks
+  const safeSection = section ?? {
+    headline: 'Our Services',
+    subheadline: 'Comprehensive roofing solutions',
+    services: []
+  };
 
-<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {section.services.map((service, idx) => (
-        <motion.div
-          key={service.id}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: idx * 0.1 }}
-          viewport={{ once: true }}
-          className={clsx(
-            "group rounded-2xl p-8 border transition-all duration-300 flex flex-col h-full",
-            service.available 
-              ? "bg-white border-slate-200 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-500/10" 
-              : "bg-slate-50 border-slate-100 opacity-60"
-          )}
-        >
-          <div className="flex justify-between items-start mb-6">
-            <div className={clsx(
-              "h-12 w-12 rounded-xl flex items-center justify-center text-2xl",
-              service.available ? "bg-emerald-50 text-emerald-600" : "bg-slate-200 text-slate-400"
-            )}>
-              {idx === 0 ? '⚡' : idx === 1 ? '🏠' : idx === 2 ? '💧' : '🔧'}
-            </div>
-            <span className="font-bold text-slate-900">{service.price_from}</span>
-          </div>
+  const safeData = data ?? fallbackSiteData;
 
-          <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-emerald-600 transition-colors">
-            {service.name}
-          </h3>
-          <p className="text-slate-600 text-sm mb-6 flex-grow">{service.description}</p>
+  return (
+    <section className="py-24 bg-white" id="services">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{safeSection.headline}</h2>
+          <p className="text-slate-600 max-w-2xl mx-auto">{safeSection.subheadline}</p>
+        </div>
 
-          <ul className="space-y-2 mb-8">
-            {service.features?.map((feature, fIdx) => (
-              <li key={fIdx} className="flex items-center gap-2 text-sm text-slate-500">
-                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {feature}
-              </li>
-            ))}
-          </ul>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {(safeSection.services ?? []).map((service, idx) => (
+            <motion.div
+              key={service.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              viewport={{ once: true }}
+              className={clsx(
+                "group rounded-2xl p-8 border transition-all duration-300 flex flex-col h-full",
+                service.available 
+                  ? "bg-white border-slate-200 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-500/10" 
+                  : "bg-slate-50 border-slate-100 opacity-60"
+              )}
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className={clsx(
+                  "h-12 w-12 rounded-xl flex items-center justify-center text-2xl",
+                  service.available ? "bg-emerald-50 text-emerald-600" : "bg-slate-200 text-slate-400"
+                )}>
+                  {idx === 0 ? '⚡' : idx === 1 ? '🏠' : idx === 2 ? '💧' : '🔧'}
+                </div>
+                <span className="font-bold text-slate-900">{service.price_from}</span>
+              </div>
 
-          <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded">
-              {service.response_time}
-            </span>
-            {service.available && (
-              <button className="text-emerald-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                Book Now →
-              </button>
-            )}
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  </div>
-</section>
-);
+              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-emerald-600 transition-colors">
+                {service.name}
+              </h3>
+              <p className="text-slate-600 text-sm mb-6 flex-grow">{service.description}</p>
+
+              <ul className="space-y-2 mb-8">
+                {(service.features ?? []).map((feature, fIdx) => (
+                  <li key={fIdx} className="flex items-center gap-2 text-sm text-slate-500">
+                    <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                  {service.response_time}
+                </span>
+                {service.available && (
+                  <button className="text-emerald-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Book Now →
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 };
 // ============================================================================
 // SOCIAL PROOF (Localized)
@@ -941,48 +1063,115 @@ const MobileStickyCTA: React.FC<{ section: MobileCtaSection; phone: string }> = 
 // MAIN LAYOUT
 // ============================================================================
 export default function LocalServiceTemplate({ data, sections }: LocalServiceTemplateProps) {
-return (
-<div className="bg-slate-50 min-h-screen font-sans selection:bg-emerald-500/30">
-<LocalBusinessSchema data={data} />
+  // Root guard - if data or sections are undefined, show skeleton loader
+  if (!data || !sections) {
+    return <SkeletonLoader />;
+  }
 
-<main>
-    <HeroSection section={sections.hero} leadCapture={sections.lead_capture} data={data} />
-    <LocalIntelSection section={sections.local_intel} data={data} />
-    <TechnicianLogSection section={sections.technician_log} data={data} />
-    <ServicesSection section={sections.services} data={data} />
-    <SocialProofSection section={sections.social_proof} data={data} />
-    
-    {/* Priority Service Footer */}
-    <section className="bg-orange-600 py-12 relative overflow-hidden">
-      <NoiseOverlay opacity={0.05} />
-      <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">{sections.emergency.headline}</h2>
-        <p className="text-orange-100 mb-8 max-w-2xl mx-auto">{sections.emergency.subheadline}</p>
-        <a href={`tel:${data.phone}`} className="inline-block bg-white text-orange-700 font-bold text-xl px-8 py-4 rounded-xl shadow-xl hover:scale-105 transition-transform">
-          Call {sections.emergency.phone}
-        </a>
-        <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-orange-100">
-          {sections.emergency.features.map((feat, i) => (
-            <span key={i} className="flex items-center gap-1">
-              ✓ {feat}
-            </span>
-          ))}
+  // Safe data access with fallbacks
+  const safeData = data ?? fallbackSiteData;
+  const safeSections = sections ?? {
+    hero: {
+      headline: 'Local Roofing Services',
+      headline_location: 'Your Area',
+      subheadline: 'Professional roofing solutions for your community',
+      service_status: fallbackServiceStatus,
+      trust_signals: ['Licensed & Insured', 'Free Quotes', 'Same-Day Service'],
+      service_notice: undefined,
+      weather_alert: undefined
+    },
+    lead_capture: {
+      headline: 'Get Your Free Quote',
+      subheadline: 'Schedule your inspection today',
+      form_fields: [],
+      submit_text: 'Request Quote',
+      privacy_text: 'Your information is secure',
+      urgency_text: undefined,
+      guarantee_badge: undefined
+    },
+    local_intel: {
+      headline: 'Local Area Insights',
+      subheadline: 'Understanding your community\'s roofing needs',
+      stats: [],
+      common_issues: []
+    },
+    technician_log: {
+      headline: 'Field Technician Reports',
+      subheadline: 'Recent inspections and recommendations',
+      location_summary: 'No recent inspections available',
+      logs: [],
+      last_inspection_date: 'N/A'
+    },
+    services: {
+      headline: 'Our Services',
+      subheadline: 'Comprehensive roofing solutions',
+      services: []
+    },
+    social_proof: {
+      headline: 'Community Trust',
+      subheadline: 'What your neighbors say about us',
+      testimonials: [],
+      recent_projects: [],
+      total_jobs_in_area: 0,
+      avg_rating: 0,
+      review_count: 0
+    },
+    emergency: {
+      headline: 'Emergency Roofing Services',
+      subheadline: 'Available 24/7 for urgent repairs',
+      phone: safeData?.phone ?? '',
+      features: ['24/7 Emergency Response', 'Same-Day Service', 'Free Assessments'],
+      available_hours: '24/7'
+    },
+    mobile_cta: {
+      call_text: 'Call Now',
+      book_text: 'Book Online',
+      phone: safeData?.phone ?? ''
+    }
+  };
+
+  return (
+    <div className="bg-slate-50 min-h-screen font-sans selection:bg-emerald-500/30">
+      <LocalBusinessSchema data={safeData} />
+
+      <main>
+        <HeroSection section={safeSections.hero} leadCapture={safeSections.lead_capture} data={safeData} />
+        <LocalIntelSection section={safeSections.local_intel} data={safeData} />
+        <TechnicianLogSection section={safeSections.technician_log} data={safeData} />
+        <ServicesSection section={safeSections.services} data={safeData} />
+        <SocialProofSection section={safeSections.social_proof} data={safeData} />
+        
+        {/* Priority Service Footer */}
+        <section className="bg-orange-600 py-12 relative overflow-hidden">
+          <NoiseOverlay opacity={0.05} />
+          <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+            <h2 className="text-3xl font-bold text-white mb-4">{safeSections.emergency.headline}</h2>
+            <p className="text-orange-100 mb-8 max-w-2xl mx-auto">{safeSections.emergency.subheadline}</p>
+            <a href={`tel:${safeData.phone}`} className="inline-block bg-white text-orange-700 font-bold text-xl px-8 py-4 rounded-xl shadow-xl hover:scale-105 transition-transform">
+              Call {safeSections.emergency.phone}
+            </a>
+            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-orange-100">
+              {(safeSections.emergency.features ?? []).map((feat, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  ✓ {feat}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <MobileStickyCTA section={safeSections.mobile_cta} phone={safeData.phone} />
+      
+      {/* Simple Footer */}
+      <footer className="bg-slate-950 py-12 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-white font-bold text-xl">{safeData.site_name}</div>
+          <div className="text-slate-500 text-sm">
+            © {new Date().getFullYear()} {safeData.site_name}. Serving {safeData.location.suburb} & {safeData.location.region}.
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
-
-  <MobileStickyCTA section={sections.mobile_cta} phone={data.phone} />
-  
-  {/* Simple Footer */}
-  <footer className="bg-slate-950 py-12 border-t border-white/10">
-    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div className="text-white font-bold text-xl">{data.site_name}</div>
-      <div className="text-slate-500 text-sm">
-        © {new Date().getFullYear()} {data.site_name}. Serving {data.location.suburb} & {data.location.region}.
-      </div>
+      </footer>
     </div>
-  </footer>
-</div>
-);
+  );
 }
