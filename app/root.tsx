@@ -9,6 +9,9 @@ import {
 } from "react-router";
 
 import "./app.css";
+import GlobalNav from "./components/global/GlobalNav";
+import GlobalFooter from "./components/global/GlobalFooter";
+import StickyCallButton from "./components/global/StickyCallButton";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,8 +22,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
-        {children}
+      <body className="bg-slate-950 text-white">
+        <GlobalNav />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <GlobalFooter />
+        <StickyCallButton />
         <ScrollRestoration />
         <Scripts />
       </body>
