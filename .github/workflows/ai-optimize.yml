@@ -1,0 +1,183 @@
+name: AI Optimization Analysis
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      force_analysis:
+        description: 'Force analysis even if data threshold not met'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  analyze-and-optimize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check data threshold
+        id: check-data
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Check if we have enough data for analysis
+          # This script would query Supabase to see if we have sufficient friction points
+          # For now, we'll always proceed if force_analysis is true
+          if [ "${{ inputs.force_analysis }}" = "true" ]; then
+            echo "data_sufficient=true" >> $GITHUB_OUTPUT
+          else
+            # In a real implementation, you would query Supabase here
+            # For now, we'll assume we have enough data
+            echo "data_sufficient=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run AI Optimization Analysis
+        if: steps.check-data.outputs.data_sufficient == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          API_SECRET: ${{ secrets.AI_OPTIMIZATION_SECRET }}
+        run: |
+          # Trigger the Cloudflare Worker AI optimization endpoint
+          curl -X POST \
+            -H "Authorization: Bearer $API_SECRET" \
+            -H "Content-Type: application/json" \
+            "https://true-roof-2026.your-cloudflare-worker.workers.dev/ai-optimization" \
+            -d '{"force": true}'
+
+      - name: Create Analysis Report
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Generate a report of recent optimizations
+          node << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+          
+          async function generateReport() {
+            const { data: recentProposals, error } = await supabase
+              .from('optimization_history')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(10);
+            
+            if (error) {
+              console.error('Error fetching proposals:', error);
+              process.exit(1);
+            }
+            
+            const report = {
+              generated_at: new Date().toISOString(),
+              total_proposals: recentProposals.length,
+              by_status: recentProposals.reduce((acc, p) => {
+                acc[p.status] = (acc[p.status] || 0) + 1;
+                return acc;
+              }, {}),
+              recent_proposals: recentProposals.map(p => ({
+                proposal_id: p.proposal_id,
+                friction_point: p.friction_point,
+                status: p.status,
+                created_at: p.created_at,
+                pr_url: p.pr_url
+              }))
+            };
+            
+            console.log('::set-output name=report::' + JSON.stringify(report));
+            
+            // Create a markdown report
+            const markdown = `# AI Optimization Report
+Generated: ${new Date().toISOString()}
+
+## Summary
+- Total proposals analyzed: ${recentProposals.length}
+- Status breakdown: ${Object.entries(report.by_status).map(([k, v]) => `${k}: ${v}`).join(', ')}
+
+## Recent Proposals
+${recentProposals.map(p => `
+### ${p.friction_point}
+- **ID:** ${p.proposal_id}
+- **Status:** ${p.status}
+- **Created:** ${new Date(p.created_at).toLocaleDateString()}
+- **PR:** ${p.pr_url ? \`[View PR](${p.pr_url})\` : 'No PR created'}
+`).join('\n')}`;
+            
+            require('fs').writeFileSync('optimization-report.md', markdown);
+          }
+          
+          generateReport().catch(console.error);
+          EOF
+
+      - name: Upload Optimization Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimization-report
+          path: optimization-report.md
+
+      - name: Create GitHub Issue for Review
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f optimization-report.md ]; then
+            REPORT_CONTENT=$(cat optimization-report.md | jq -sR . | sed 's/"/\\"/g')
+            TITLE="AI Optimization Analysis Report - $(date +%Y-%m-%d)"
+            
+            # Create or update issue
+            curl -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/issues" \
+              -d "$(cat << JSON
+            {
+              "title": "$TITLE",
+              "body": "$REPORT_CONTENT",
+              "labels": ["ai-optimization", "report"]
+            }
+            JSON
+            )"
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'AI Optimization Analysis Failed',
+              body: `Analysis failed for ${context.workflow} run ${context.runId}. Check workflow logs for details.`,
+              labels: ['ai-optimization', 'failed']
+            });

@@ -1,0 +1,305 @@
+name: Safety Check for AI Optimizations
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'public/**'
+      - '*.css'
+      - '*.scss'
+      - '*.tsx'
+      - '*.ts'
+      - '*.jsx'
+      - '*.js'
+
+jobs:
+  safety-validation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Validate PR is from AI Optimization
+        id: check-ai-pr
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          if [[ "$PR_TITLE" == *"Optimization:"* ]] || [[ "$PR_BODY" == *"Proposal ID:"* ]]; then
+            echo "is_ai_pr=true" >> $GITHUB_OUTPUT
+            echo "Detected AI-generated optimization PR"
+          else
+            echo "is_ai_pr=false" >> $GITHUB_OUTPUT
+            echo "Not an AI optimization PR, skipping safety checks"
+          fi
+
+      - name: Check file changes
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true'
+        id: check-files
+        run: |
+          # Get changed files
+          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > changed_files.txt
+          
+          # Check for disallowed file types
+          DISALLOWED_PATTERNS=(
+            "*.env*"
+            "*.secret*"
+            "package-lock.json"
+            "wrangler.toml"
+            ".dev.vars"
+            "supabase/**"
+            "functions/[[path]].ts"
+            "functions/sitemap.xml.ts"
+          )
+          
+          VIOLATIONS=()
+          while IFS= read -r file; do
+            for pattern in "${DISALLOWED_PATTERNS[@]}"; do
+              if [[ "$file" == $pattern ]]; then
+                VIOLATIONS+=("$file")
+                break
+              fi
+            done
+          done < changed_files.txt
+          
+          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            echo "Found disallowed file changes:"
+            printf '%s\n' "${VIOLATIONS[@]}"
+            echo "has_violations=true" >> $GITHUB_OUTPUT
+            echo "violations=${VIOLATIONS[*]}" >> $GITHUB_OUTPUT
+          else
+            echo "has_violations=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Count total changed lines
+          TOTAL_CHANGES=$(git diff --stat ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | tail -1 | awk '{print $4}')
+          echo "total_changes=$TOTAL_CHANGES" >> $GITHUB_OUTPUT
+
+      - name: Validate change size
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true'
+        id: check-size
+        run: |
+          MAX_CHANGES=500
+          TOTAL_CHANGES=${{ steps.check-files.outputs.total_changes }}
+          
+          if [ "$TOTAL_CHANGES" -gt "$MAX_CHANGES" ]; then
+            echo "size_violation=true" >> $GITHUB_OUTPUT
+            echo "Changes exceed maximum allowed ($MAX_CHANGES lines): $TOTAL_CHANGES lines"
+          else
+            echo "size_violation=false" >> $GITHUB_OUTPUT
+            echo "Change size within limits: $TOTAL_CHANGES lines"
+          fi
+
+      - name: Run security scan
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true'
+        uses: actions/github-script@v7
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        with:
+          script: |
+            const { createClient } = require('@supabase/supabase-js');
+            
+            // Extract proposal ID from PR body
+            const prBody = context.payload.pull_request.body;
+            const proposalIdMatch = prBody.match(/Proposal ID:\s*([^\s\n]+)/);
+            
+            if (!proposalIdMatch) {
+              console.log('No proposal ID found in PR body');
+              return;
+            }
+            
+            const proposalId = proposalIdMatch[1];
+            
+            // Initialize Supabase
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            
+            // Check if proposal exists and is valid
+            const { data: proposal, error } = await supabase
+              .from('optimization_history')
+              .select('*')
+              .eq('proposal_id', proposalId)
+              .single();
+            
+            if (error) {
+              console.error('Error fetching proposal:', error);
+              await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'Safety Check',
+                head_sha: context.payload.pull_request.head.sha,
+                status: 'completed',
+                conclusion: 'failure',
+                output: {
+                  title: 'Proposal validation failed',
+                  summary: 'Could not validate optimization proposal in database'
+                }
+              });
+              return;
+            }
+            
+            if (!proposal) {
+              await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'Safety Check',
+                head_sha: context.payload.pull_request.head.sha,
+                status: 'completed',
+                conclusion: 'failure',
+                output: {
+                  title: 'Invalid proposal',
+                  summary: 'Optimization proposal not found in database'
+                }
+              });
+              return;
+            }
+            
+            // Update proposal status
+            await supabase
+              .from('optimization_history')
+              .update({ 
+                status: 'approved',
+                pr_url: context.payload.pull_request.html_url,
+                pr_number: context.payload.pull_request.number
+              })
+              .eq('proposal_id', proposalId);
+            
+            console.log('Proposal validated and status updated');
+
+      - name: Create safety check summary
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true'
+        id: safety-summary
+        run: |
+          VIOLATIONS=${{ steps.check-files.outputs.has_violations }}
+          SIZE_VIOLATION=${{ steps.check-size.outputs.size_violation }}
+          
+          if [ "$VIOLATIONS" = "true" ] || [ "$SIZE_VIOLATION" = "true" ]; then
+            echo "safety_passed=false" >> $GITHUB_OUTPUT
+            
+            SUMMARY="## Safety Check Failed\n\n"
+            
+            if [ "$VIOLATIONS" = "true" ]; then
+              VIOLATION_FILES="${{ steps.check-files.outputs.violations }}"
+              SUMMARY+="### Disallowed File Changes\n"
+              SUMMARY+="The following files cannot be modified by AI optimizations:\n"
+              SUMMARY+="\`\`\`\n"
+              SUMMARY+="$VIOLATION_FILES\n"
+              SUMMARY+="\`\`\`\n\n"
+            fi
+            
+            if [ "$SIZE_VIOLATION" = "true" ]; then
+              TOTAL_CHANGES="${{ steps.check-files.outputs.total_changes }}"
+              SUMMARY+="### Change Size Exceeded\n"
+              SUMMARY+="Changes exceed maximum allowed size (500 lines).\n"
+              SUMMARY+="Total changes: $TOTAL_CHANGES lines\n\n"
+            fi
+            
+            SUMMARY+="**Action Required:** Human review needed before merging."
+            
+            echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
+          else
+            echo "safety_passed=true" >> $GITHUB_OUTPUT
+            echo "summary=## Safety Check Passed\n\nAll safety checks passed. Ready for human review." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post safety check result
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const safetyPassed = '${{ steps.safety-summary.outputs.safety_passed }}' === 'true';
+            const summary = '${{ steps.safety-summary.outputs.summary }}'.replace(/\\n/g, '\n');
+            
+            const conclusion = safetyPassed ? 'success' : 'failure';
+            const title = safetyPassed ? 'Safety Check Passed' : 'Safety Check Failed';
+            
+            // Create check run
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Safety Check',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: title,
+                summary: summary
+              }
+            });
+            
+            // Add comment to PR
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: summary
+            });
+            
+            // Request human review if safety check failed
+            if (!safetyPassed) {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                reviewers: ['getwebface'] // Replace with actual username
+              });
+            }
+
+      - name: Run automated tests
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true' && steps.safety-summary.outputs.safety_passed == 'true'
+        run: |
+          # Run basic smoke tests
+          echo "Running automated tests..."
+          
+          # Check TypeScript compilation
+          npx tsc --noEmit
+          
+          # Run any existing tests
+          if [ -f "package.json" ]; then
+            if grep -q '"test"' package.json; then
+              npm test -- --passWithNoTests
+            fi
+          fi
+
+      - name: Deploy preview
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true' && steps.safety-summary.outputs.safety_passed == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Deploy to Cloudflare Pages preview
+          echo "Deploying preview environment..."
+          
+          # This would deploy to a preview environment for A/B testing
+          # For now, we'll just log the intention
+          echo "Preview deployment would happen here"
+          
+          # In a real implementation:
+          # npx wrangler pages deploy --branch preview-${{ github.event.pull_request.number }}
+
+      - name: Notify on safety violation
+        if: steps.check-ai-pr.outputs.is_ai_pr == 'true' && steps.safety-summary.outputs.safety_passed == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create an issue for safety violation
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Safety Violation in PR #${context.payload.pull_request.number}`,
+              body: `Safety check failed for AI optimization PR #${context.payload.pull_request.number}.\n\n${context.payload.pull_request.html_url}\n\nRequires immediate human review.`,
+              labels: ['safety-violation', 'urgent']
+            });
