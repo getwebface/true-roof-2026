@@ -193,39 +193,40 @@ sections: Sections;
 // SEO HELPER: SCHEMA.ORG JSON-LD
 // ============================================================================
 const LocalBusinessSchema: React.FC<{ data: SiteData }> = ({ data }) => {
-const schema = {
-"@context": "https://schema.org",
-"@type": "HomeAndConstructionBusiness",
-"name": data.site_name,
-"image": data.logo_url,
-"telephone": data.phone,
-"email": data.email,
-"url": data.website_url,
-"address": {
-"@type": "PostalAddress",
-"addressLocality": data.location.suburb,
-"addressRegion": data.location.state,
-"postalCode": data.location.postcode,
-"addressCountry": "AU"
-},
-"areaServed": {
-"@type": "GeoCircle",
-"geoMidpoint": {
-"@type": "GeoCoordinates",
-"latitude": data.location.latitude || -37.8136,
-"longitude": data.location.longitude || 144.9631
-},
-"geoRadius": data.location.service_radius_km || 25) * 1000
-},
-"priceRange": "$"
-"
-};
-return (
-<script
-type="application/ld+json"
-dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-/>
-);
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "HomeAndConstructionBusiness",
+    "name": data.site_name,
+    "image": data.logo_url,
+    "telephone": data.phone,
+    "email": data.email,
+    "url": data.website_url,
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": data.location.suburb,
+      "addressRegion": data.location.state,
+      "postalCode": data.location.postcode,
+      "addressCountry": "AU"
+    },
+    "areaServed": {
+      "@type": "GeoCircle",
+      "geoMidpoint": {
+        "@type": "GeoCoordinates",
+        "latitude": data.location.latitude || -37.8136,
+        "longitude": data.location.longitude || 144.9631
+      },
+      // Ensure math is wrapped in parentheses correctly
+      "geoRadius": (data.location.service_radius_km || 25) * 1000
+    },
+    "priceRange": "$"
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
 };
 // ============================================================================
 // REUSABLE COMPONENTS
