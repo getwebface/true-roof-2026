@@ -14,6 +14,7 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isWithinBusinessHours, setIsWithinBusinessHours] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,13 +26,38 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const checkBusinessHours = () => {
+      const now = new Date();
+      // Convert to AEST (UTC+10) - Australia Eastern Standard Time
+      // Note: Australia observes DST from October to April, but for simplicity
+      // we'll use AEST (UTC+10) year-round for business hours
+      const aestOffset = 10 * 60; // AEST is UTC+10
+      const localOffset = now.getTimezoneOffset(); // in minutes
+      const aestTime = new Date(now.getTime() + (aestOffset + localOffset) * 60000);
+      
+      const hours = aestTime.getHours();
+      const minutes = aestTime.getMinutes();
+      const currentTime = hours + minutes / 60;
+      
+      // Business hours: 10am to 4pm AEST
+      const isBusinessHours = currentTime >= 10 && currentTime < 16;
+      setIsWithinBusinessHours(isBusinessHours);
+    };
+
+    checkBusinessHours();
+    // Check every minute to update business hours status
+    const interval = setInterval(checkBusinessHours, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const cn = (...inputs: (string | undefined | false | null)[]) => twMerge(clsx(inputs));
 
   const formattedPhoneNumber = phoneNumber.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isVisible && isWithinBusinessHours && (
         <motion.div
           initial={{ opacity: 0, y: 100, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -50,10 +76,10 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
             className={cn(
               'relative flex items-center gap-3',
               'px-6 py-4 rounded-full shadow-2xl',
-              'bg-gradient-to-r from-red-600 via-red-500 to-emerald-600',
+              'bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600',
               'text-white font-bold text-lg',
               'transition-all duration-300',
-              'hover:shadow-red-500/50 hover:shadow-xl',
+              'hover:shadow-orange-500/50 hover:shadow-xl',
               'active:scale-95'
             )}
             whileHover={{ scale: 1.05 }}
@@ -72,7 +98,7 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
                 ease: 'easeInOut',
               }}
               style={{
-                background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.8), rgba(16, 185, 129, 0.8))',
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.8), rgba(234, 88, 12, 0.8))',
                 filter: 'blur(8px)',
                 zIndex: -1,
               }}
@@ -83,9 +109,9 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
               className="absolute inset-0 rounded-full"
               animate={{
                 boxShadow: [
-                  '0 0 20px 0 rgba(220, 38, 38, 0.7)',
-                  '0 0 30px 10px rgba(16, 185, 129, 0.7)',
-                  '0 0 20px 0 rgba(220, 38, 38, 0.7)',
+                  '0 0 20px 0 rgba(249, 115, 22, 0.5)',
+                  '0 0 30px 10px rgba(234, 88, 12, 0.5)',
+                  '0 0 20px 0 rgba(249, 115, 22, 0.5)',
                 ],
               }}
               transition={{
@@ -119,7 +145,7 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
             {/* Text Content */}
             <div className="flex flex-col items-start">
               <span className="text-sm font-semibold tracking-wider uppercase">
-                Emergency Dispatch
+                Call Us Today
               </span>
               <span className="text-xl font-black tracking-tight">
                 {formattedPhoneNumber}
@@ -141,7 +167,7 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
             {/* Mobile Indicator */}
             <div className="hidden sm:block absolute -top-2 -right-2">
               <motion.div
-                className="w-3 h-3 rounded-full bg-emerald-500"
+                className="w-3 h-3 rounded-full bg-orange-500"
                 animate={{ 
                   scale: [1, 1.5, 1],
                   opacity: [1, 0.5, 1]
@@ -158,8 +184,8 @@ const StickyCallButton: React.FC<StickyCallButtonProps> = ({
             className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-lg shadow-lg"
           >
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span>24/7 Emergency Service</span>
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+              <span>Available 10am-4pm AEST</span>
             </div>
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900/90 rotate-45" />
           </motion.div>
