@@ -9,6 +9,18 @@ import TestimonialsSection from './sections/home/TestimonialsSection';
 import ServiceMapSection from './sections/home/ServiceMapSection';
 import ProcessSection from './sections/home/ProcessSection';
 import ServicesSection from './sections/home/ServicesSection';
+import BeforeAfterSection from './sections/home/BeforeAfterSection';
+import FAQSection from './sections/home/FAQSection';
+import FinalCTASection from './sections/home/FinalCTASection';
+
+// Service Hub sections
+import FilteringMatrix from './sections/hub/FilteringMatrix';
+import ServicesGridSection from './sections/hub/ServicesGridSection';
+import ComparisonSection from './sections/hub/ComparisonSection';
+import TechSpecsSection from './sections/hub/TechSpecsSection';
+import HubCTASection from './sections/hub/CTASection';
+import HubProcessSection from './sections/hub/ProcessSection';
+
 // Import other sections as they become available
 
 // Lazy loaded components
@@ -21,19 +33,19 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'testimonials': TestimonialsSection,
   'service_map': ServiceMapSection,
   'process': ProcessSection,
-  'before_after': () => React.createElement('div', null, 'BeforeAfterSection (to be imported)'),
+  'before_after': BeforeAfterSection,
   'services': ServicesSection,
-  'faq': () => React.createElement('div', null, 'FAQSection (to be imported)'),
-  'final_cta': () => React.createElement('div', null, 'FinalCTASection (to be imported)'),
+  'faq': FAQSection,
+  'final_cta': FinalCTASection,
   
   // Service Hub Template Sections
   'hub_hero': ServiceHubHero,
-  'hub_filtering': () => React.createElement('div', null, 'FilteringMatrix (to be imported)'),
-  'hub_services_grid': () => React.createElement('div', null, 'ServicesGridSection (to be imported)'),
-  'hub_comparison': () => React.createElement('div', null, 'ComparisonSection (to be imported)'),
-  'hub_tech_specs': () => React.createElement('div', null, 'TechSpecsSection (to be imported)'),
-  'hub_process': () => React.createElement('div', null, 'ProcessSection (to be imported)'),
-  'hub_cta': () => React.createElement('div', null, 'CTASection (to be imported)'),
+  'hub_filtering': FilteringMatrix,
+  'hub_services_grid': ServicesGridSection,
+  'hub_comparison': ComparisonSection,
+  'hub_tech_specs': TechSpecsSection,
+  'hub_process': HubProcessSection,
+  'hub_cta': HubCTASection,
   
   // Local Service Template Sections
   'local_hero': () => React.createElement('div', null, 'LocalHeroSection (to be imported)'),
