@@ -21,6 +21,15 @@ import TechSpecsSection from './sections/hub/TechSpecsSection';
 import HubCTASection from './sections/hub/CTASection';
 import HubProcessSection from './sections/hub/ProcessSection';
 
+// Local Service sections
+import LocalHeroSection from './sections/local/LocalHeroSection';
+import LocalIntelSection from './sections/local/LocalIntelSection';
+import TechnicianLogSection from './sections/local/TechnicianLogSection';
+import LocalServicesSection from './sections/local/LocalServicesSection';
+import SocialProofSection from './sections/local/SocialProofSection';
+import EmergencySection from './sections/local/EmergencySection';
+import MobileStickyCTA from './sections/local/MobileStickyCTA';
+
 // Import other sections as they become available
 
 // Lazy loaded components
@@ -48,12 +57,12 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'hub_cta': HubCTASection,
   
   // Local Service Template Sections
-  'local_hero': () => React.createElement('div', null, 'LocalHeroSection (to be imported)'),
-  'local_intel': () => React.createElement('div', null, 'LocalIntelSection (to be imported)'),
-  'local_technician_log': () => React.createElement('div', null, 'TechnicianLogSection (to be imported)'),
-  'local_services': () => React.createElement('div', null, 'LocalServicesSection (to be imported)'),
-  'local_social_proof': () => React.createElement('div', null, 'SocialProofSection (to be imported)'),
-  'local_emergency': () => React.createElement('div', null, 'EmergencySection (to be imported)'),
+  'local_hero': LocalHeroSection,
+  'local_intel': LocalIntelSection,
+  'local_technician_log': TechnicianLogSection,
+  'local_services': LocalServicesSection,
+  'local_social_proof': SocialProofSection,
+  'local_emergency': EmergencySection,
   
   // Utility Components
   'headless_form': () => React.createElement('div', null, 'HeadlessForm (to be imported)'),
