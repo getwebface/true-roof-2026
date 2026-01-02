@@ -30,13 +30,7 @@ import TechnicianLogSection from './sections/local/TechnicianLogSection';
 import LocalServicesSection from './sections/local/LocalServicesSection';
 import SocialProofSection from './sections/local/SocialProofSection';
 import EmergencySection from './sections/local/EmergencySection';
-<<<<<<< HEAD
-=======
 import MobileStickyCTA from './sections/local/MobileStickyCTA';
-
-// Import other sections as they become available
->>>>>>> 1695f84 (500 error fix (apparently))
-
 export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   // Home Template Sections
   'hero_home': HeroSection,
