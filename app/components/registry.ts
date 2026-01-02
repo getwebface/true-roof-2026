@@ -5,6 +5,8 @@ import React from 'react';
 import HeroSection from './sections/home/HeroSection';
 import BentoGridSection from './sections/home/BentoGridSection';
 import TestimonialsSection from './sections/home/TestimonialsSection';
+import ServiceMapSection from './sections/home/ServiceMapSection';
+import ProcessSection from './sections/home/ProcessSection';
 // Import other sections as they become available
 
 export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
@@ -12,9 +14,9 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'hero_home': HeroSection,
   'bento_grid': BentoGridSection,
   'testimonials': TestimonialsSection,
+  'service_map': ServiceMapSection,
+  'process': ProcessSection,
   'before_after': () => React.createElement('div', null, 'BeforeAfterSection (to be imported)'),
-  'service_map': () => React.createElement('div', null, 'ServiceMapSection (to be imported)'),
-  'process': () => React.createElement('div', null, 'ProcessSection (to be imported)'),
   'services': () => React.createElement('div', null, 'ServicesSection (to be imported)'),
   'faq': () => React.createElement('div', null, 'FAQSection (to be imported)'),
   'final_cta': () => React.createElement('div', null, 'FinalCTASection (to be imported)'),
