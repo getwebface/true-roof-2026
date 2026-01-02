@@ -142,7 +142,7 @@ UPDATE pages SET
             },
             {
               "number": 3,
-              "title": "Installation",
+              "title": "Installation of materials"
               "description": "Professional installation with quality materials"
             },
             {
