@@ -6,6 +6,7 @@ import DynamicPageRenderer from "~/components/DynamicPageRenderer";
 import { validatePageSections } from "~/components/registry";
 import type { GlobalSiteData } from "~/types/sdui";
 import { initLogger, error as logError, info as logInfo, warn as logWarn } from "~/lib/logging/logger";
+import SeoHead from "~/components/seo/SeoHead";
 
 // Simple hash function for session-based variant assignment
 function hashString(str: string): number {
@@ -387,20 +388,11 @@ export default function DynamicPage() {
   // Use DynamicPageRenderer for all pages
   return (
     <>
-      <DynamicPageRenderer 
+      <SeoHead siteData={siteData} />
+      <DynamicPageRenderer
         sections={sections}
         siteData={siteData}
       />
-      {/* Global components that should appear on all pages */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <a 
-          href={`tel:${siteData.config.phone}`}
-          className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        >
-          <span className="text-2xl">📞</span>
-          <span className="font-semibold">Call Now</span>
-        </a>
-      </div>
     </>
   );
 }

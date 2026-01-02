@@ -7,6 +7,7 @@ import React from 'react';
 import { twMerge } from 'tailwind-merge';
 import { getComponentByType, validatePageSections, type PageSections } from './registry';
 import type { GlobalSiteData } from '~/types/sdui';
+import { getLogger } from '~/lib/logging/logger';
 
 interface DynamicPageRendererProps {
   sections: PageSections | any;
@@ -14,14 +15,20 @@ interface DynamicPageRendererProps {
   className?: string;
 }
 
-const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({ 
-  sections, 
-  siteData, 
-  className 
+const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
+  sections,
+  siteData,
+  className
 }) => {
+  const logger = getLogger();
+
   // Validate sections structure
   if (!validatePageSections(sections)) {
-    console.error('Invalid sections structure:', sections);
+    logger?.error('client', 'Invalid sections structure', new Error('Invalid sections structure'), {
+      sectionsType: typeof sections,
+      hasLayoutOrder: !!(sections as any)?.layout_order,
+      hasSections: !!(sections as any)?.sections
+    });
     return (
       <div className="p-8 bg-red-50 text-red-700 rounded-lg">
         <h2 className="text-xl font-bold mb-2">Invalid Page Configuration</h2>
@@ -37,15 +44,18 @@ const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
 
   return (
     <div className={twMerge('w-full', className)}>
-      {layout_order.map((sectionId) => {
+      {layout_order.map((sectionId: string) => {
         const section = sectionData[sectionId];
         if (!section) {
-          console.warn(`Section "${sectionId}" not found in sections data`);
+          logger?.warn('client', `Section "${sectionId}" not found in sections data`, {
+            sectionId,
+            availableSections: Object.keys(sectionData)
+          });
           return null;
         }
 
         const Component = getComponentByType(section.type);
-        
+
         return (
           <Component
             key={section.id}

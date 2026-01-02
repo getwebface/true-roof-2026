@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getLogger } from '~/lib/logging/logger';
 
 interface ABTestWrapperProps {
   testId: string;
@@ -50,7 +51,11 @@ export default function ABTestWrapper({
         onVariantAssigned?.(randomVariant);
         
       } catch (error) {
-        console.error('Error assigning A/B test variant:', error);
+        const logger = getLogger();
+        logger?.error('client', 'Error assigning A/B test variant', error as Error, {
+          testId,
+          componentId
+        });
         // Fallback to variant A on error
         setVariant('A');
         setIsLoading(false);
@@ -92,11 +97,23 @@ export default function ABTestWrapper({
       });
 
       if (!response.ok) {
-        console.warn('Failed to track A/B test assignment');
+        const logger = getLogger();
+        logger?.warn('client', 'Failed to track A/B test assignment', {
+          testId,
+          componentId,
+          variant,
+          status: response.status
+        });
       }
     } catch (error) {
       // Silent fail - assignment tracking is non-critical
-      console.warn('A/B test assignment tracking failed:', error);
+      const logger = getLogger();
+      logger?.warn('client', 'A/B test assignment tracking failed', {
+        testId,
+        componentId,
+        variant,
+        error: (error as Error).message
+      });
     }
   };
 
@@ -129,7 +146,14 @@ export default function ABTestWrapper({
         keepalive: true
       });
     } catch (error) {
-      console.warn('A/B test conversion tracking failed:', error);
+      const logger = getLogger();
+      logger?.warn('client', 'A/B test conversion tracking failed', {
+        testId,
+        componentId,
+        variant,
+        conversionEvent,
+        error: (error as Error).message
+      });
     }
   };
 
@@ -180,7 +204,13 @@ export function useABTestConversion(testId: string, componentId: string) {
         keepalive: true
       });
     } catch (error) {
-      console.warn('A/B test conversion tracking failed:', error);
+      const logger = getLogger();
+      logger?.warn('client', 'A/B test conversion tracking failed', {
+        testId,
+        componentId,
+        conversionEvent,
+        error: (error as Error).message
+      });
     }
   };
 

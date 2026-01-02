@@ -7,6 +7,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import type { SectionProps } from '~/types/sdui';
+import GlassCard from '~/components/sections/shared/GlassCard';
+import MagneticButton from '~/components/sections/shared/MagneticButton';
+import AnimatedCounter from '~/components/sections/shared/AnimatedCounter';
+import NoiseOverlay from '~/components/sections/shared/NoiseOverlay';
 
 // Reuse utility hooks from original file
 const useMousePosition = () => {
@@ -38,151 +42,7 @@ const useWindowSize = () => {
   return size;
 };
 
-// Reuse utility components
-const NoiseOverlay: React.FC<{ opacity?: number }> = ({ opacity = 0.03 }) => (
-  <div 
-    className="pointer-events-none absolute inset-0 z-50"
-    style={{
-      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-      opacity,
-    }}
-  />
-);
 
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-  blur?: 'sm' | 'md' | 'lg' | 'xl';
-  dark?: boolean;
-  hover?: boolean;
-}> = ({ children, className = '', blur = 'lg', dark = true, hover = true }) => {
-  const blurClasses = {
-    sm: 'backdrop-blur-sm',
-    md: 'backdrop-blur-md',
-    lg: 'backdrop-blur-lg',
-    xl: 'backdrop-blur-xl',
-  };
-  
-  return (
-    <motion.div
-      className={`
-        relative overflow-hidden rounded-2xl border
-        ${blurClasses[blur]}
-        ${dark 
-          ? 'border-white/10 bg-white/5' 
-          : 'border-black/5 bg-white/70'
-        }
-        ${hover ? 'transition-all duration-500 hover:border-white/20 hover:bg-white/10' : ''}
-        ${className}
-      `}
-      whileHover={hover ? { scale: 1.02, y: -4 } : undefined}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-    >
-      <NoiseOverlay opacity={0.02} />
-      {children}
-    </motion.div>
-  );
-};
-
-const MagneticButton: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost';
-}> = ({ children, className = '', onClick, variant = 'primary' }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    x.set((e.clientX - centerX) * 0.15);
-    y.set((e.clientY - centerY) * 0.15);
-  }, [x, y]);
-  
-  const handleMouseLeave = useCallback(() => {
-    x.set(0);
-    y.set(0);
-  }, [x, y]);
-  
-  const springX = useSpring(x, { stiffness: 150, damping: 15 });
-  const springY = useSpring(y, { stiffness: 150, damping: 15 });
-  
-  const variants = {
-    primary: 'bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white shadow-lg shadow-orange-500/30',
-    secondary: 'bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20',
-    ghost: 'bg-transparent border-2 border-white/30 text-white hover:border-white/60',
-  };
-  
-  return (
-    <motion.button
-      ref={buttonRef}
-      style={{ x: springX, y: springY }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={onClick}
-      whileTap={{ scale: 0.95 }}
-      className={`
-        relative overflow-hidden rounded-full px-8 py-4 font-semibold
-        transition-all duration-300
-        ${variants[variant]}
-        ${className}
-      `}
-    >
-      <span className="relative z-10">{children}</span>
-      <motion.div
-        className="absolute inset-0 -z-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
-        initial={{ x: '-100%' }}
-        whileHover={{ x: '100%' }}
-        transition={{ duration: 0.6 }}
-      />
-    </motion.button>
-  );
-};
-
-const AnimatedCounter: React.FC<{
-  value: string;
-  suffix?: string;
-  duration?: number;
-}> = ({ value, suffix = '', duration = 2 }) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
-  const [displayValue, setDisplayValue] = useState('0');
-  
-  useEffect(() => {
-    if (!isInView) return;
-    
-    const numericValue = parseInt(value.replace(/\D/g, ''), 10);
-    if (isNaN(numericValue)) {
-      setDisplayValue(value);
-      return;
-    }
-    
-    let startTime: number;
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const current = Math.floor(easeOutQuart * numericValue);
-      setDisplayValue(current.toLocaleString());
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-    
-    requestAnimationFrame(animate);
-  }, [isInView, value, duration]);
-  
-  return (
-    <span ref={ref}>
-      {displayValue}{suffix}
-    </span>
-  );
-};
 
 // Main HeroSection Component
 const HeroSection: React.FC<SectionProps> = ({ id, data, siteData, styles, trackingId, className, animations }) => {

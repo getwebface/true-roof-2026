@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { trackConversion } from '~/lib/tracking/behaviorTracker';
+import { getLogger } from '~/lib/logging/logger';
 import NoiseOverlay from '~/components/sections/shared/NoiseOverlay';
 import MapTextureBackground from '~/components/sections/shared/MapTextureBackground';
 import ServiceStatusIndicator from '~/components/sections/shared/ServiceStatusIndicator';
@@ -90,7 +91,13 @@ const LocalHeroSection: React.FC<LocalHeroSectionProps> = ({ section, leadCaptur
     // Simulate API
     await new Promise(r => setTimeout(r, 1500));
     setFormState(p => ({ ...p, loading: false, submitted: true }));
-    console.log('Lead captured:', formState.data);
+
+    const logger = getLogger();
+    logger?.info('client', 'Lead captured successfully', {
+      formData: formState.data,
+      location: safeData?.location?.suburb
+    });
+
     // Track conversion
     trackConversion('lead_capture_form', 'submit_success', 1);
   };

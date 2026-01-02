@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { trackEvent, trackConversion } from '~/lib/tracking/behaviorTracker';
+import { getLogger } from '~/lib/logging/logger';
 
 interface FormField {
   id: string; // Dummy ID that will be replaced with actual Google Form field IDs
@@ -223,7 +224,11 @@ const HeadlessForm: React.FC<HeadlessFormProps> = ({
       });
 
     } catch (error) {
-      console.error('Form submission error:', error);
+      const logger = getLogger();
+      logger?.error('client', 'Form submission error', error as Error, {
+        formId,
+        trackingPrefix
+      });
       trackEvent(`${trackingPrefix}_error`, {
         formId,
         error: error instanceof Error ? error.message : 'Unknown error'
