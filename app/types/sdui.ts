@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 // Standardized Section Props Interface
 // This interface defines the contract for all dynamic components in the system
 
@@ -44,6 +46,78 @@ export interface GlobalSiteData {
     userId?: string;
     pageViewId: string;
   };
+}
+
+// Zod validation schemas
+export const animationSchema = z.object({
+  entrance: z.enum(['fadeIn', 'slideUp', 'slideLeft', 'scaleUp', 'none']).optional(),
+  duration: z.number().optional(),
+  delay: z.number().optional(),
+  staggerChildren: z.number().optional(),
+});
+
+export const sectionDataSchema = z.object({
+  type: z.string(),
+  id: z.string(),
+  data: z.any(),
+  styles: z.string().optional(),
+  trackingId: z.string().optional(),
+  className: z.string().optional(),
+  animations: animationSchema.optional(),
+});
+
+export const pageSectionsSchema = z.object({
+  layout_order: z.array(z.string()),
+  sections: z.record(z.string(), sectionDataSchema),
+});
+
+export const globalSiteDataSchema = z.object({
+  config: z.object({
+    site_name: z.string(),
+    tagline: z.string(),
+    phone: z.string(),
+    email: z.string(),
+    address: z.string(),
+    logo_url: z.string(),
+    primary_color: z.string(),
+    secondary_color: z.string(),
+    website_url: z.string(),
+  }),
+  location: z.object({
+    suburb: z.string(),
+    region: z.string(),
+    postcode: z.string(),
+    state: z.string(),
+    service_radius_km: z.number(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+  }).optional(),
+  analytics: z.object({
+    sessionId: z.string(),
+    userId: z.string().optional(),
+    pageViewId: z.string(),
+  }).optional(),
+});
+
+// Type inference from schemas
+export type ValidatedSectionData = z.infer<typeof sectionDataSchema>;
+export type ValidatedPageSections = z.infer<typeof pageSectionsSchema>;
+export type ValidatedGlobalSiteData = z.infer<typeof globalSiteDataSchema>;
+
+// Validation helper functions
+export function validateSectionData(data: any): ValidatedSectionData | null {
+  const result = sectionDataSchema.safeParse(data);
+  return result.success ? result.data : null;
+}
+
+export function validatePageSections(data: any): ValidatedPageSections | null {
+  const result = pageSectionsSchema.safeParse(data);
+  return result.success ? result.data : null;
+}
+
+export function validateGlobalSiteData(data: any): ValidatedGlobalSiteData | null {
+  const result = globalSiteDataSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
 
 // Animation presets for Framer Motion

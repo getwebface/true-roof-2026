@@ -1,13 +1,18 @@
 // Component Registry
 // Maps JSON type strings to React components for dynamic rendering
 
-import React from 'react';
+import * as React from 'react';
+import { lazy } from 'react';
 import HeroSection from './sections/home/HeroSection';
 import BentoGridSection from './sections/home/BentoGridSection';
 import TestimonialsSection from './sections/home/TestimonialsSection';
 import ServiceMapSection from './sections/home/ServiceMapSection';
 import ProcessSection from './sections/home/ProcessSection';
+import ServicesSection from './sections/home/ServicesSection';
 // Import other sections as they become available
+
+// Lazy loaded components
+const ServiceHubHero = lazy(() => import('./sections/hub/ServiceHubHero'));
 
 export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   // Home Template Sections
@@ -17,12 +22,12 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'service_map': ServiceMapSection,
   'process': ProcessSection,
   'before_after': () => React.createElement('div', null, 'BeforeAfterSection (to be imported)'),
-  'services': () => React.createElement('div', null, 'ServicesSection (to be imported)'),
+  'services': ServicesSection,
   'faq': () => React.createElement('div', null, 'FAQSection (to be imported)'),
   'final_cta': () => React.createElement('div', null, 'FinalCTASection (to be imported)'),
   
   // Service Hub Template Sections
-  'hub_hero': () => React.createElement('div', null, 'ServiceHubHero (to be imported)'),
+  'hub_hero': ServiceHubHero,
   'hub_filtering': () => React.createElement('div', null, 'FilteringMatrix (to be imported)'),
   'hub_services_grid': () => React.createElement('div', null, 'ServicesGridSection (to be imported)'),
   'hub_comparison': () => React.createElement('div', null, 'ComparisonSection (to be imported)'),
@@ -54,7 +59,10 @@ export const getComponentByType = (type: string): React.FC<any> => {
   return Component;
 };
 
-// Type guard for section data structure
+// Re-export Zod validation from sdui.ts for backward compatibility
+export { validatePageSections } from '~/types/sdui';
+
+// Type guard for section data structure (kept for backward compatibility)
 export interface SectionData {
   type: string;
   id: string;
@@ -69,20 +77,3 @@ export interface PageSections {
   layout_order: string[];
   sections: Record<string, SectionData>;
 }
-
-// Validate page sections structure
-export const validatePageSections = (sections: any): sections is PageSections => {
-  if (!sections || typeof sections !== 'object') return false;
-  if (!Array.isArray(sections.layout_order)) return false;
-  if (!sections.sections || typeof sections.sections !== 'object') return false;
-  
-  // Validate each section
-  for (const sectionId of sections.layout_order) {
-    const section = sections.sections[sectionId];
-    if (!section || typeof section !== 'object') return false;
-    if (!section.type || typeof section.type !== 'string') return false;
-    if (!section.id || typeof section.id !== 'string') return false;
-  }
-  
-  return true;
-};

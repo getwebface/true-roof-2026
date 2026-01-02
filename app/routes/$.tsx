@@ -6,7 +6,43 @@ import DynamicPageRenderer from "~/components/DynamicPageRenderer";
 import { validatePageSections } from "~/components/registry";
 import type { GlobalSiteData } from "~/types/sdui";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+// Simple hash function for session-based variant assignment
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+// Deep merge function for combining variant JSON with base sections
+function deepMerge(target: any, source: any): any {
+  const output = { ...target };
+  
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          output[key] = source[key];
+        } else {
+          output[key] = deepMerge(target[key], source[key]);
+        }
+      } else {
+        output[key] = source[key];
+      }
+    });
+  }
+  
+  return output;
+}
+
+function isObject(item: any): boolean {
+  return item && typeof item === 'object' && !Array.isArray(item);
+}
+
+export async function loader({ params, context, request }: Route.LoaderArgs) {
   // Get environment variables from Cloudflare context or process
   const env = (context as any).cloudflare?.env || process.env;
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
@@ -16,34 +52,77 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (slug !== "/" && slug.endsWith("/")) slug = slug.slice(0, -1);
   if (slug === "") slug = "/";
 
-  const { data, error } = await supabase
+  // Check cache headers from request
+  const cacheKey = `page:${slug}`;
+  const cacheControl = request.headers.get('Cache-Control') || 'public, max-age=60, stale-while-revalidate=300';
+  
+  // Fetch page data
+  const { data: pageData, error: pageError } = await supabase
     .from("pages")
     .select("*")
     .eq("slug", slug)
     .single();
 
-  if (error || !data) {
-    console.error("Supabase Error for slug [" + slug + "]:", error);
+  if (pageError || !pageData) {
+    console.error("Supabase Error for slug [" + slug + "]:", pageError);
     return { page: null, sections: null, siteData: null, error: "No data found for slug: " + slug };
   }
 
-  // Safely parse content_sections
+  // Parse base sections
   let sections = {};
   try {
-    sections = typeof data.content_sections === 'string' 
-      ? JSON.parse(data.content_sections) 
-      : data.content_sections;
+    sections = typeof pageData.content_sections === 'string' 
+      ? JSON.parse(pageData.content_sections) 
+      : pageData.content_sections;
   } catch (parseError) {
     console.error("JSON Parse Error for sections:", parseError);
     return { page: null, sections: null, siteData: null, error: "Malformed content_sections JSON" };
   }
 
+  // Check for active A/B tests for this page
+  const { data: activeTests, error: testsError } = await supabase
+    .from("a_b_tests")
+    .select("*")
+    .eq("status", "active")
+    .eq("component_id", pageData.id) // Assuming page ID is stored in component_id
+    .maybeSingle();
+
+  // If we have an active test, check variant assignment
+  if (activeTests && !testsError) {
+    // Generate session ID (in production, this would come from cookies or user session)
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const hash = hashString(sessionId);
+    
+    // Determine if user gets variant (e.g., 50% traffic split)
+    const getsVariant = hash % 100 < (activeTests.traffic_percentage || 50);
+    
+    if (getsVariant) {
+      try {
+        // Parse variant JSON (assuming variant_b is the test variant)
+        const variantJson = typeof activeTests.variant_b === 'string' 
+          ? JSON.parse(activeTests.variant_b) 
+          : activeTests.variant_b;
+        
+        // Merge variant JSON with base sections
+        sections = deepMerge(sections, variantJson);
+        
+        // Record variant assignment (in production, you'd want to store this)
+        console.log(`User assigned to variant B for test ${activeTests.test_id}`);
+      } catch (variantError) {
+        console.error("Error parsing variant JSON:", variantError);
+        // Fall back to base sections if variant parsing fails
+      }
+    } else {
+      console.log(`User assigned to control group (variant A) for test ${activeTests.test_id}`);
+    }
+  }
+
   // Create enriched page data
   const enrichedPage = {
-    ...data,
+    ...pageData,
     location: {
-      suburb: data.location_name || "Local Area",
-      state: data.location_state_region || "VIC",
+      suburb: pageData.location_name || "Local Area",
+      state: pageData.location_state_region || "VIC",
       postcode: "3756" // Defaulting to the target area postcode
     }
   };
@@ -51,24 +130,24 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   // Create global site data for components
   const siteData: GlobalSiteData = {
     config: {
-      site_name: data.company_name || "True Roof",
-      tagline: data.tagline || "Professional Roofing Services",
-      phone: data.phone_number || "+61 123 456 789",
-      email: data.email || "contact@example.com",
-      address: data.address || "123 Roofing St, Melbourne VIC 3000",
-      logo_url: data.logo_url || "/logo.svg",
-      primary_color: data.primary_color || "#f97316", // orange-500
-      secondary_color: data.secondary_color || "#dc2626", // red-600
-      website_url: data.website_url || "https://trueroof.com.au"
+      site_name: pageData.company_name || "True Roof",
+      tagline: pageData.tagline || "Professional Roofing Services",
+      phone: pageData.phone_number || "+61 123 456 789",
+      email: pageData.email || "contact@example.com",
+      address: pageData.address || "123 Roofing St, Melbourne VIC 3000",
+      logo_url: pageData.logo_url || "/logo.svg",
+      primary_color: pageData.primary_color || "#f97316", // orange-500
+      secondary_color: pageData.secondary_color || "#dc2626", // red-600
+      website_url: pageData.website_url || "https://trueroof.com.au"
     },
     location: {
-      suburb: data.location_name || "Local Area",
-      region: data.location_state_region || "VIC",
+      suburb: pageData.location_name || "Local Area",
+      region: pageData.location_state_region || "VIC",
       postcode: "3756",
-      state: data.location_state_region || "VIC",
-      service_radius_km: data.service_radius_km || 50,
-      latitude: data.latitude,
-      longitude: data.longitude
+      state: pageData.location_state_region || "VIC",
+      service_radius_km: pageData.service_radius_km || 50,
+      latitude: pageData.latitude,
+      longitude: pageData.longitude
     },
     analytics: {
       sessionId: `session_${Date.now()}`,
@@ -76,12 +155,28 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     }
   };
 
-  return { 
+  // Return response with cache headers
+  const responseData = { 
     page: enrichedPage, 
     sections, 
     siteData,
     error: null 
   };
+  
+  // In a Cloudflare Worker context, you would set headers like this:
+  // return new Response(JSON.stringify(responseData), {
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     'Cache-Control': cacheControl,
+  //     'CDN-Cache-Control': cacheControl,
+  //   }
+  // });
+  
+  // For React Router, we return the data directly but note that caching
+  // would be handled at the Cloudflare Worker level
+  console.log(`Cache control for ${slug}: ${cacheControl}`);
+  
+  return responseData;
 }
 
 export default function DynamicPage() {
