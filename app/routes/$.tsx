@@ -43,6 +43,54 @@ function isObject(item: any): boolean {
   return item && typeof item === 'object' && !Array.isArray(item);
 }
 
+// Safe parse function for page data with comprehensive defaults
+function safeParsePageData(rawPageData: any): {
+  id: string;
+  slug: string;
+  page_type: string;
+  company_name: string;
+  tagline: string;
+  phone_number: string;
+  email: string;
+  address: string;
+  logo_url: string;
+  primary_color: string;
+  secondary_color: string;
+  website_url: string;
+  location_name: string;
+  location_state_region: string;
+  postcode: string;
+  service_radius_km: number;
+  latitude?: number;
+  longitude?: number;
+  content_sections: any;
+} {
+  // Ensure we have an object to work with
+  const pageData = isObject(rawPageData) ? rawPageData : {};
+
+  return {
+    id: typeof pageData.id === 'string' ? pageData.id : 'default-page-id',
+    slug: typeof pageData.slug === 'string' ? pageData.slug : '/',
+    page_type: typeof pageData.page_type === 'string' ? pageData.page_type : 'home',
+    company_name: typeof pageData.company_name === 'string' ? pageData.company_name : 'True Roof',
+    tagline: typeof pageData.tagline === 'string' ? pageData.tagline : 'Professional Roofing Services',
+    phone_number: typeof pageData.phone_number === 'string' ? pageData.phone_number : '+61 400 000 000',
+    email: typeof pageData.email === 'string' ? pageData.email : 'contact@example.com',
+    address: typeof pageData.address === 'string' ? pageData.address : '123 Roofing St, Melbourne VIC 3000',
+    logo_url: typeof pageData.logo_url === 'string' ? pageData.logo_url : '/logo.svg',
+    primary_color: typeof pageData.primary_color === 'string' ? pageData.primary_color : '#f97316',
+    secondary_color: typeof pageData.secondary_color === 'string' ? pageData.secondary_color : '#dc2626',
+    website_url: typeof pageData.website_url === 'string' ? pageData.website_url : 'https://trueroof.com.au',
+    location_name: typeof pageData.location_name === 'string' ? pageData.location_name : 'Local Area',
+    location_state_region: typeof pageData.location_state_region === 'string' ? pageData.location_state_region : 'VIC',
+    postcode: typeof pageData.postcode === 'string' ? pageData.postcode : '3756',
+    service_radius_km: typeof pageData.service_radius_km === 'number' ? pageData.service_radius_km : 50,
+    latitude: typeof pageData.latitude === 'number' ? pageData.latitude : undefined,
+    longitude: typeof pageData.longitude === 'number' ? pageData.longitude : undefined,
+    content_sections: pageData.content_sections // Keep raw for separate parsing
+  };
+}
+
 export async function loader({ params, context, request }: Route.LoaderArgs) {
   // Initialize logger
   const logger = initLogger();
@@ -113,17 +161,20 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
       };
     }
 
+    // Apply safe parsing to ensure all data has proper types and defaults
+    const safePageData = safeParsePageData(pageData);
+
     // Parse base sections with robust error handling
     let sections: any = {};
     try {
-      if (pageData.content_sections) {
-        sections = typeof pageData.content_sections === 'string'
-          ? JSON.parse(pageData.content_sections)
-          : pageData.content_sections;
+      if (safePageData.content_sections) {
+        sections = typeof safePageData.content_sections === 'string'
+          ? JSON.parse(safePageData.content_sections)
+          : safePageData.content_sections;
       } else {
         logWarn('validation', `No content_sections found for page: ${slug}`, {
-          pageId: pageData.id,
-          pageType: pageData.page_type
+          pageId: safePageData.id,
+          pageType: safePageData.page_type
         });
         // Provide default structure for DynamicPageRenderer
         sections = {
@@ -133,9 +184,9 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
       }
     } catch (parseError) {
       logError('validation', `JSON parse error for content_sections on page: ${slug}`, parseError as Error, {
-        pageId: pageData.id,
-        contentSectionsType: typeof pageData.content_sections,
-        contentSectionsLength: typeof pageData.content_sections === 'string' ? pageData.content_sections.length : 'N/A'
+        pageId: safePageData.id,
+        contentSectionsType: typeof safePageData.content_sections,
+        contentSectionsLength: typeof safePageData.content_sections === 'string' ? safePageData.content_sections.length : 'N/A'
       });
       // Provide fallback structure
       sections = {
@@ -147,7 +198,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
     // Ensure the structure matches what DynamicPageRenderer expects
     if (!sections.layout_order || !sections.sections) {
       logWarn('validation', `Invalid sections structure for DynamicPageRenderer on page: ${slug}`, {
-        pageId: pageData.id,
+        pageId: safePageData.id,
         hasLayoutOrder: !!sections.layout_order,
         hasSections: !!sections.sections
       });
@@ -165,12 +216,12 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
         .from("a_b_tests")
         .select("*")
         .eq("status", "active")
-        .eq("page_id", pageData.id) // Fixed: use page_id instead of component_id
+        .eq("page_id", safePageData.id) // Fixed: use page_id instead of component_id
         .maybeSingle();
 
       if (testsError) {
         logWarn('database', `A/B test query failed for page: ${slug}`, {
-          pageId: pageData.id,
+          pageId: safePageData.id,
           error: testsError.message
         });
       } else if (activeTests) {
@@ -195,14 +246,14 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
 
               logInfo('server', `Applied A/B test variant B for page: ${slug}`, {
                 testId: activeTests.test_id,
-                pageId: pageData.id,
+                pageId: safePageData.id,
                 sessionId
               });
             }
           } catch (variantError) {
             logError('validation', `Error parsing A/B test variant JSON for page: ${slug}`, variantError as Error, {
               testId: activeTests.test_id,
-              pageId: pageData.id
+              pageId: safePageData.id
             });
             // Fall back to base sections if variant parsing fails
             finalSections = sections;
@@ -210,51 +261,51 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
         } else {
           logInfo('server', `User assigned to A/B test control group for page: ${slug}`, {
             testId: activeTests.test_id,
-            pageId: pageData.id,
+            pageId: safePageData.id,
             sessionId
           });
         }
       }
     } catch (abTestError) {
       logError('server', `A/B testing error for page: ${slug}`, abTestError as Error, {
-        pageId: pageData.id
+        pageId: safePageData.id
       });
       // Continue with base sections
       finalSections = sections;
     }
 
-    // Create enriched page data with null safety
+    // Create enriched page data with null safety using safe parsed data
     const enrichedPage = {
-      ...pageData,
+      ...safePageData,
       location: {
-        suburb: pageData.location_name || "Local Area",
-        state: pageData.location_state_region || "VIC",
-        postcode: pageData.postcode || "3756"
+        suburb: safePageData.location_name,
+        state: safePageData.location_state_region,
+        postcode: safePageData.postcode
       }
     };
 
     // Create global site data for components with comprehensive null safety
-    // Ensure EVERY field in GlobalSiteData has a fallback string to prevent null crashes
+    // Using safe parsed data ensures EVERY field has proper defaults
     const siteData: GlobalSiteData = {
       config: {
-        site_name: pageData.company_name || "True Roof",
-        tagline: pageData.tagline || "Professional Roofing Services",
-        phone: pageData.phone_number || "+61 400 000 000",
-        email: pageData.email || "contact@example.com",
-        address: pageData.address || "123 Roofing St, Melbourne VIC 3000",
-        logo_url: pageData.logo_url || "/logo.svg",
-        primary_color: pageData.primary_color || "#f97316",
-        secondary_color: pageData.secondary_color || "#dc2626",
-        website_url: pageData.website_url || "https://trueroof.com.au"
+        site_name: safePageData.company_name,
+        tagline: safePageData.tagline,
+        phone: safePageData.phone_number,
+        email: safePageData.email,
+        address: safePageData.address,
+        logo_url: safePageData.logo_url,
+        primary_color: safePageData.primary_color,
+        secondary_color: safePageData.secondary_color,
+        website_url: safePageData.website_url
       },
       location: {
-        suburb: pageData.location_name || "Local Area",
-        region: pageData.location_state_region || "VIC",
-        postcode: pageData.postcode || "3756",
-        state: pageData.location_state_region || "VIC",
-        service_radius_km: pageData.service_radius_km || 50,
-        latitude: pageData.latitude || undefined,
-        longitude: pageData.longitude || undefined
+        suburb: safePageData.location_name,
+        region: safePageData.location_state_region,
+        postcode: safePageData.postcode,
+        state: safePageData.location_state_region,
+        service_radius_km: safePageData.service_radius_km,
+        latitude: safePageData.latitude,
+        longitude: safePageData.longitude
       },
       analytics: {
         sessionId: `session_${Date.now()}`,
@@ -263,8 +314,8 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
     };
 
     logInfo('server', `Successfully loaded page: ${slug}`, {
-      pageId: pageData.id,
-      pageType: pageData.page_type,
+      pageId: safePageData.id,
+      pageType: safePageData.page_type,
       hasSections: Object.keys(finalSections).length > 0,
       cacheControl
     });
