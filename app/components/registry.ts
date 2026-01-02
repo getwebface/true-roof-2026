@@ -1,6 +1,8 @@
 // app/components/registry.ts
 
 import * as React from 'react';
+import HeadlessForm from './forms/HeadlessForm';
+
 // Remove { lazy } from imports
 import HeroSection from './sections/home/HeroSection';
 import BentoGridSection from './sections/home/BentoGridSection';
@@ -62,7 +64,7 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'local_emergency': EmergencySection,
 
   // Utility Components
-  'headless_form': () => React.createElement('div', null, 'HeadlessForm (to be imported)'),
+  'headless_form': HeadlessForm,
 };
 
 export const getComponentByType = (type: string): React.FC<any> => {

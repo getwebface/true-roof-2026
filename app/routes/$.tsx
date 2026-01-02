@@ -114,7 +114,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
     }
 
     // Parse base sections with robust error handling
-    let sections = {};
+    let sections: any = {};
     try {
       if (pageData.content_sections) {
         sections = typeof pageData.content_sections === 'string'
@@ -125,7 +125,11 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
           pageId: pageData.id,
           pageType: pageData.page_type
         });
-        sections = {};
+        // Provide default structure for DynamicPageRenderer
+        sections = {
+          layout_order: [],
+          sections: {}
+        };
       }
     } catch (parseError) {
       logError('validation', `JSON parse error for content_sections on page: ${slug}`, parseError as Error, {
@@ -133,11 +137,24 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
         contentSectionsType: typeof pageData.content_sections,
         contentSectionsLength: typeof pageData.content_sections === 'string' ? pageData.content_sections.length : 'N/A'
       });
-      return {
-        page: null,
-        sections: null,
-        siteData: null,
-        error: "Invalid page content structure"
+      // Provide fallback structure
+      sections = {
+        layout_order: [],
+        sections: {}
+      };
+    }
+
+    // Ensure the structure matches what DynamicPageRenderer expects
+    if (!sections.layout_order || !sections.sections) {
+      logWarn('validation', `Invalid sections structure for DynamicPageRenderer on page: ${slug}`, {
+        pageId: pageData.id,
+        hasLayoutOrder: !!sections.layout_order,
+        hasSections: !!sections.sections
+      });
+      // Fix the structure
+      sections = {
+        layout_order: sections.layout_order || [],
+        sections: sections.sections || sections
       };
     }
 
@@ -217,11 +234,12 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
     };
 
     // Create global site data for components with comprehensive null safety
+    // Ensure EVERY field in GlobalSiteData has a fallback string to prevent null crashes
     const siteData: GlobalSiteData = {
       config: {
         site_name: pageData.company_name || "True Roof",
         tagline: pageData.tagline || "Professional Roofing Services",
-        phone: pageData.phone_number || "+61 123 456 789",
+        phone: pageData.phone_number || "+61 400 000 000",
         email: pageData.email || "contact@example.com",
         address: pageData.address || "123 Roofing St, Melbourne VIC 3000",
         logo_url: pageData.logo_url || "/logo.svg",
