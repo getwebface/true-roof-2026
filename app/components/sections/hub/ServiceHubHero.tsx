@@ -46,19 +46,6 @@ interface SiteData {
 }
 
 interface ServiceHubHeroProps {
-<<<<<<< HEAD
-  data: HeroSection;      // Renderer passes section data as 'data'
-  siteData: SiteData;     // Renderer passes global data as 'siteData'
-}
-
-export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
-  data: section, // Rename 'data' to 'section' for internal use
-  siteData: data // Rename 'siteData' to 'data' for internal use
-}) => {
-  // Guard clause for safety
-  if (!section) return null;
-
-=======
   data: HeroSection;
   siteData: SiteData;
 }
@@ -66,10 +53,9 @@ export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
 export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
   data,
   siteData,
-}) => {
+}: ServiceHubHeroProps) => {
   // Map props to expected variable names
   const section = data;
->>>>>>> 1695f84 (500 error fix (apparently))
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,

@@ -19,9 +19,13 @@ import ComparisonSection from './sections/hub/ComparisonSection';
 import TechSpecsSection from './sections/hub/TechSpecsSection';
 import HubCTASection from './sections/hub/CTASection';
 import HubProcessSection from './sections/hub/ProcessSection';
+<<<<<<< HEAD
 import ServiceHubHero from './sections/hub/ServiceHubHero'; // Standard import
 import ServiceHubHero from './sections/hub/ServiceHubHero';
 
+=======
+import ServiceHubHero from './sections/hub/ServiceHubHero';
+>>>>>>> 89a6f03 (cro improvements)
 
 // Local Service sections
 import LocalHeroSection from './sections/local/LocalHeroSection';
@@ -31,6 +35,12 @@ import LocalServicesSection from './sections/local/LocalServicesSection';
 import SocialProofSection from './sections/local/SocialProofSection';
 import EmergencySection from './sections/local/EmergencySection';
 import MobileStickyCTA from './sections/local/MobileStickyCTA';
+<<<<<<< HEAD
+=======
+
+// Import other sections as they become available
+
+>>>>>>> 89a6f03 (cro improvements)
 export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   // Home Template Sections
   'hero_home': HeroSection,
@@ -42,7 +52,7 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'services': ServicesSection,
   'faq': FAQSection,
   'final_cta': FinalCTASection,
-  
+
   // Service Hub Template Sections
   'hub_hero': ServiceHubHero,
   'hub_filtering': FilteringMatrix,
@@ -51,7 +61,7 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'hub_tech_specs': TechSpecsSection,
   'hub_process': HubProcessSection,
   'hub_cta': HubCTASection,
-  
+
   // Local Service Template Sections
   'local_hero': LocalHeroSection,
   'local_intel': LocalIntelSection,
@@ -59,7 +69,7 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'local_services': LocalServicesSection,
   'local_social_proof': SocialProofSection,
   'local_emergency': EmergencySection,
-  
+
   // Utility Components
   'headless_form': () => React.createElement('div', null, 'HeadlessForm (to be imported)'),
 };
@@ -68,8 +78,8 @@ export const getComponentByType = (type: string): React.FC<any> => {
   const Component = COMPONENT_REGISTRY[type];
   if (!Component) {
     console.warn(`Component type "${type}" not found in registry`);
-    return () => React.createElement('div', { 
-      className: 'p-4 bg-red-50 text-red-700 rounded-lg' 
+    return () => React.createElement('div', {
+      className: 'p-4 bg-red-50 text-red-700 rounded-lg'
     }, `Unknown component type: ${type}`);
   }
   return Component;

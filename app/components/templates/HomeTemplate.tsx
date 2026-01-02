@@ -1,6 +1,6 @@
 // HomeTemplate.tsx
-// TrueRoof - World-Class Bento UI Home Page Template
-// Built with React 18+, TypeScript, Tailwind CSS, Framer Motion
+// TrueRoof - Premium Local Roofing Services Template
+// Professional, approachable, and community-focused
 
 'use client';
 
@@ -34,7 +34,7 @@ interface HeroSection {
   primary_cta: string;
   secondary_cta: string;
   stats: HeroStat[];
-  background_video_url?: string;
+  background_image_url?: string;
   trust_badges: string[];
 }
 
@@ -420,62 +420,44 @@ const HeroSection: React.FC<{ section: HeroSection; data: SiteData }> = ({ secti
     target: containerRef,
     offset: ['start start', 'end start'],
   });
-  
-  const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
+
+  const y = useTransform(scrollYProgress, [0, 1], [0, 100]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
-  
-  const mousePosition = useMousePosition();
-  const windowSize = useWindowSize();
-  
-  const mouseX = useSpring(
-    (mousePosition.x / (windowSize.width || 1) - 0.5) * 20,
-    { stiffness: 100, damping: 30 }
-  );
-  const mouseY = useSpring(
-    (mousePosition.y / (windowSize.height || 1) - 0.5) * 20,
-    { stiffness: 100, damping: 30 }
-  );
-  
+
   return (
-    <section 
+    <section
       ref={containerRef}
       data-component-id="hero-section"
-      className="relative min-h-[100vh] overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+      className="relative min-h-[100vh] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
     >
-      {/* Animated Background Grid */}
-      <div className="absolute inset-0 opacity-30">
-        <div 
+      {/* Background Image */}
+      {section.background_image_url && (
+        <div className="absolute inset-0">
+          <img
+            src={section.background_image_url}
+            alt="Professional roofing work"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/90" />
+        </div>
+      )}
+
+      {/* Simple Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div
           className="absolute inset-0"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
+              linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
             `,
-            backgroundSize: '60px 60px',
+            backgroundSize: '80px 80px',
           }}
         />
       </div>
-      
-      {/* Floating Orbs */}
-      <motion.div 
-        className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-orange-500/20 blur-[128px]"
-        style={{ x: mouseX, y: mouseY }}
-      />
-      <motion.div 
-        className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-red-500/20 blur-[128px]"
-        style={{ x: useTransform(mouseX, v => -v), y: useTransform(mouseY, v => -v) }}
-      />
-      <motion.div 
-        className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px]"
-        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 8, repeat: Infinity }}
-      />
-      
-      <NoiseOverlay opacity={0.04} />
-      
-      <motion.div 
-        style={{ y, opacity, scale }}
+
+      <motion.div
+        style={{ y, opacity }}
         className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-6 py-32"
       >
         {/* Trust Badges */}
@@ -485,8 +467,8 @@ const HeroSection: React.FC<{ section: HeroSection; data: SiteData }> = ({ secti
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mb-8 flex flex-wrap items-center justify-center gap-4"
         >
-          {section.trust_badges.map((badge, index) => (
-            <div 
+          {section.trust_badges.map((badge: string, index: number) => (
+            <div
               key={index}
               className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 backdrop-blur-sm"
             >
@@ -537,9 +519,9 @@ const HeroSection: React.FC<{ section: HeroSection; data: SiteData }> = ({ secti
           transition={{ duration: 1, delay: 1.2 }}
           className="mt-20 grid w-full max-w-4xl grid-cols-2 gap-4 md:grid-cols-4"
         >
-          {section.stats.map((stat, index) => (
-            <GlassCard 
-              key={index} 
+          {section.stats.map((stat: HeroStat, index: number) => (
+            <GlassCard
+              key={index}
               className="group p-6 text-center"
               dark
             >
@@ -878,14 +860,14 @@ const BeforeAfterSection: React.FC<{ section: Sections['before_after'] }> = ({ s
             transition={{ duration: 0.8, delay: 0.4 }}
             className="grid grid-cols-2 gap-4"
           >
-            {section.slides.map((slide, index) => (
-              <motion.button
-                key={slide.id}
-                onClick={() => setActiveSlide(index)}
-                className={`group relative aspect-video overflow-hidden rounded-xl transition-all duration-300 ${
-                  activeSlide === index 
-                    ? 'ring-4 ring-orange-500 ring-offset-2' 
-                    : 'opacity-70 hover:opacity-100'
+          {section.slides.map((slide: BeforeAfterSlide, index: number) => (
+            <motion.button
+              key={slide.id}
+              onClick={() => setActiveSlide(index)}
+              className={`group relative aspect-video overflow-hidden rounded-xl transition-all duration-300 ${
+                activeSlide === index
+                  ? 'ring-4 ring-orange-500 ring-offset-2'
+                  : 'opacity-70 hover:opacity-100'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -995,7 +977,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
               </div>
               
               {/* Service Area Markers */}
-              {section.areas.map((area) => {
+              {section.areas.map((area: ServiceArea) => {
                 const pos = getPositionFromCoords(area.coordinates.lat, area.coordinates.lng);
                 return (
                   <motion.button
@@ -1056,7 +1038,7 @@ const ServiceMapSection: React.FC<{ section: Sections['service_map'] }> = ({ sec
             transition={{ duration: 0.8, delay: 0.4 }}
             className="space-y-3"
           >
-            {section.areas.map((area) => (
+            {section.areas.map((area: ServiceArea) => (
               <motion.button
                 key={area.id}
                 onClick={() => setSelectedArea(area)}
@@ -1143,7 +1125,7 @@ const TestimonialsSection: React.FC<{ section: Sections['testimonials'] }> = ({ 
           
           {/* Social Proof Badges */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
-            {section.social_proof.map((proof, index) => (
+            {section.social_proof.map((proof: SocialProof, index: number) => (
               <motion.a
                 key={index}
                 href={proof.url}
@@ -1267,7 +1249,7 @@ const TestimonialsSection: React.FC<{ section: Sections['testimonials'] }> = ({ 
           transition={{ duration: 0.8, delay: 0.4 }}
           className="mt-16 grid gap-4 md:grid-cols-3"
         >
-          {section.items.slice(0, 3).map((testimonial, index) => (
+          {section.items.slice(0, 3).map((testimonial: Testimonial, index: number) => (
             <motion.div
               key={testimonial.id}
               initial={{ opacity: 0, y: 20 }}
@@ -1275,8 +1257,8 @@ const TestimonialsSection: React.FC<{ section: Sections['testimonials'] }> = ({ 
               transition={{ delay: 0.6 + index * 0.1 }}
               onClick={() => setActiveIndex(index)}
               className={`cursor-pointer rounded-2xl border p-6 transition-all duration-300 ${
-                index === activeIndex 
-                  ? 'border-orange-500 bg-orange-50' 
+                index === activeIndex
+                  ? 'border-orange-500 bg-orange-50'
                   : 'border-slate-100 bg-white hover:border-orange-200 hover:shadow-md'
               }`}
             >
@@ -1368,7 +1350,7 @@ const ProcessSection: React.FC<{ section: Sections['process'] }> = ({ section })
           </div>
           
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {section.steps.map((step, index) => (
+            {section.steps.map((step: ProcessStep, index: number) => (
               <motion.div
                 key={step.id}
                 initial={{ opacity: 0, y: 40 }}
@@ -1456,15 +1438,15 @@ const ServicesSection: React.FC<{ section: Sections['services'] }> = ({ section 
             transition={{ duration: 0.8, delay: 0.2 }}
             className="space-y-4"
           >
-            {section.highlights.map((service, index) => (
-              <motion.button
-                key={service.id}
-                onClick={() => setActiveService(index)}
-                className={`w-full text-left transition-all duration-300 ${
-                  activeService === index ? 'scale-[1.02]' : ''
-                }`}
-                whileHover={{ x: 8 }}
-              >
+          {section.highlights.map((service: ServiceHighlight, index: number) => (
+            <motion.button
+              key={service.id}
+              onClick={() => setActiveService(index)}
+              className={`w-full text-left transition-all duration-300 ${
+                activeService === index ? 'scale-[1.02]' : ''
+              }`}
+              whileHover={{ x: 8 }}
+            >
                 <div 
                   className={`rounded-2xl border p-6 transition-all duration-300 ${
                     activeService === index
