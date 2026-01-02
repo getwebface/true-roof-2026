@@ -1,8 +1,7 @@
-// Component Registry
-// Maps JSON type strings to React components for dynamic rendering
+// app/components/registry.ts
 
 import * as React from 'react';
-import { lazy } from 'react';
+// Remove { lazy } from imports
 import HeroSection from './sections/home/HeroSection';
 import BentoGridSection from './sections/home/BentoGridSection';
 import TestimonialsSection from './sections/home/TestimonialsSection';
@@ -20,6 +19,7 @@ import ComparisonSection from './sections/hub/ComparisonSection';
 import TechSpecsSection from './sections/hub/TechSpecsSection';
 import HubCTASection from './sections/hub/CTASection';
 import HubProcessSection from './sections/hub/ProcessSection';
+import ServiceHubHero from './sections/hub/ServiceHubHero'; // Standard import
 
 // Local Service sections
 import LocalHeroSection from './sections/local/LocalHeroSection';
@@ -28,12 +28,6 @@ import TechnicianLogSection from './sections/local/TechnicianLogSection';
 import LocalServicesSection from './sections/local/LocalServicesSection';
 import SocialProofSection from './sections/local/SocialProofSection';
 import EmergencySection from './sections/local/EmergencySection';
-import MobileStickyCTA from './sections/local/MobileStickyCTA';
-
-// Import other sections as they become available
-
-// Lazy loaded components
-const ServiceHubHero = lazy(() => import('./sections/hub/ServiceHubHero'));
 
 export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   // Home Template Sections
@@ -68,7 +62,6 @@ export const COMPONENT_REGISTRY: Record<string, React.FC<any>> = {
   'headless_form': () => React.createElement('div', null, 'HeadlessForm (to be imported)'),
 };
 
-// Helper function to get component by type
 export const getComponentByType = (type: string): React.FC<any> => {
   const Component = COMPONENT_REGISTRY[type];
   if (!Component) {
@@ -80,21 +73,4 @@ export const getComponentByType = (type: string): React.FC<any> => {
   return Component;
 };
 
-// Re-export Zod validation from sdui.ts for backward compatibility
 export { validatePageSections } from '~/types/sdui';
-
-// Type guard for section data structure (kept for backward compatibility)
-export interface SectionData {
-  type: string;
-  id: string;
-  data: any;
-  styles?: string;
-  trackingId?: string;
-  animations?: any;
-  className?: string;
-}
-
-export interface PageSections {
-  layout_order: string[];
-  sections: Record<string, SectionData>;
-}
