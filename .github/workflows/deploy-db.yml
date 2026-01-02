@@ -1,0 +1,112 @@
+name: Deploy Database Migrations
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.PRODUCTION_PROJECT_ID }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy database migrations
+        run: |
+          supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+
+      - name: Generate TypeScript types
+        run: |
+          supabase gen types typescript > app/types/database.ts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+
+      - name: Commit generated types (if changed)
+        run: |
+          if [ -n "$(git status --porcelain app/types/database.ts)" ]; then
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add app/types/database.ts
+            git commit -m "chore: update database types [skip ci]"
+            git push
+          fi
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "## Database Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Migrations Path:** supabase/migrations/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ $? -eq 0 ]; then
+            echo "✅ Database migrations deployed successfully." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Database migration deployment failed." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on deployment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            const description = status === 'success'
+              ? 'Database migrations deployed successfully'
+              : 'Database migration deployment failed';
+
+            // Create deployment status
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment?.id || 1,
+              state: status,
+              description: description,
+              environment_url: 'https://supabase.com/dashboard/project/${{ secrets.PRODUCTION_PROJECT_ID }}'
+            });
+
+            // Comment on commit/PR if this was triggered by a push
+            if (context.eventName === 'push') {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: status === 'success'
+                  ? '✅ Database migrations deployed successfully to production.'
+                  : '❌ Database migration deployment failed. Check the workflow logs for details.'
+              });
+            }

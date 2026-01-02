@@ -5,3 +5,8 @@
 # React Router
 /.react-router/
 /build/
+
+# Supabase
+supabase/.temp/
+supabase/.branches
+supabase/.env.local
