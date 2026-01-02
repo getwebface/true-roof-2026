@@ -46,14 +46,17 @@ interface SiteData {
 }
 
 interface ServiceHubHeroProps {
-  section: HeroSection;
-  data: SiteData;
+  data: HeroSection;      // Renderer passes section data as 'data'
+  siteData: SiteData;     // Renderer passes global data as 'siteData'
 }
 
 export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
-  section,
-  data,
+  data: section, // Rename 'data' to 'section' for internal use
+  siteData: data // Rename 'siteData' to 'data' for internal use
 }) => {
+  // Guard clause for safety
+  if (!section) return null;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
