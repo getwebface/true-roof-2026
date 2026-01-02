@@ -46,6 +46,7 @@ interface SiteData {
 }
 
 interface ServiceHubHeroProps {
+<<<<<<< HEAD
   data: HeroSection;      // Renderer passes section data as 'data'
   siteData: SiteData;     // Renderer passes global data as 'siteData'
 }
@@ -57,6 +58,18 @@ export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
   // Guard clause for safety
   if (!section) return null;
 
+=======
+  data: HeroSection;
+  siteData: SiteData;
+}
+
+export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
+  data,
+  siteData,
+}) => {
+  // Map props to expected variable names
+  const section = data;
+>>>>>>> 1695f84 (500 error fix (apparently))
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -120,7 +133,7 @@ export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
         >
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm">
-            {section.breadcrumb.map((item, index) => (
+            {section.breadcrumb.map((item: string, index: number) => (
               <React.Fragment key={index}>
                 <span
                   className={clsx(
@@ -183,7 +196,7 @@ export const ServiceHubHero: React.FC<ServiceHubHeroProps> = ({
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {section.quick_stats.map((stat, index) => (
+              {section.quick_stats.map((stat: { label: string; value: string; trend?: 'up' | 'down' | 'stable'; trend_value?: string; }, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
