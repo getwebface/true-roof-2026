@@ -8,6 +8,55 @@ import type { GlobalSiteData } from "~/types/sdui";
 import { initLogger, error as logError, info as logInfo, warn as logWarn } from "~/lib/logging/logger";
 import SeoHead from "~/components/seo/SeoHead";
 
+// Circuit breaker for Supabase calls
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private readonly failureThreshold = 5;
+  private readonly recoveryTimeout = 60000; // 1 minute
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.isOpen()) {
+      throw new Error('Circuit breaker is open - service temporarily unavailable');
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  private isOpen(): boolean {
+    if (this.failures >= this.failureThreshold) {
+      const timeSinceLastFailure = Date.now() - this.lastFailureTime;
+      if (timeSinceLastFailure < this.recoveryTimeout) {
+        return true;
+      } else {
+        // Half-open state - allow one request to test recovery
+        this.failures = Math.floor(this.failureThreshold / 2);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  private onSuccess(): void {
+    this.failures = 0;
+  }
+
+  private onFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+  }
+}
+
+// Global circuit breaker instance
+const supabaseCircuitBreaker = new CircuitBreaker();
+
 // Simple hash function for session-based variant assignment
 function hashString(str: string): number {
   let hash = 0;
@@ -131,12 +180,14 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   const cacheControl = request.headers.get('Cache-Control') || 'public, max-age=60, stale-while-revalidate=300';
 
   try {
-    // Fetch page data with error handling
-    const { data: pageData, error: pageError } = await supabase
-      .from("pages")
-      .select("*")
-      .eq("slug", slug)
-      .single();
+    // Fetch page data with circuit breaker protection
+    const { data: pageData, error: pageError } = await supabaseCircuitBreaker.execute(
+      async () => await supabase
+        .from("pages")
+        .select("*")
+        .eq("slug", slug)
+        .single()
+    );
 
     if (pageError) {
       logError('database', `Supabase query failed for slug: ${slug}`, pageError, {
