@@ -7,8 +7,10 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from "react-router";
-import { useEffect } from "react"; // <--- 1. Add this import
-import { initBehaviorTracker } from "~/lib/tracking/behaviorTracker"; // <--- 2. Add this import
+import { useEffect } from "react";
+import { initBehaviorTracker } from "~/lib/tracking/behaviorTracker";
+import { initLogger, getLogger } from "~/lib/logging/logger";
+import AppErrorBoundary from "./components/ErrorBoundary";
 
 import "./app.css";
 import GlobalNav from "./components/global/GlobalNav";
@@ -39,23 +41,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  // 3. Add this useEffect block to initialize tracking
+  // Initialize logging and tracking
   useEffect(() => {
+    // Initialize centralized logger
+    initLogger();
+
+    // Initialize behavior tracker
     initBehaviorTracker({
-      // 👇 PASTE YOUR CLOUDFLARE WORKER URL HERE
-      beaconEndpoint: '/beacon-ingest', 
-      
+      beaconEndpoint: '/beacon-ingest',
       sampleRate: 1.0,
-      debug: import.meta.env.DEV // Enables logs only in development
+      debug: import.meta.env.DEV
     });
   }, []);
 
-  return <Outlet />;
+  return (
+    <AppErrorBoundary componentId="app-root">
+      <Outlet />
+    </AppErrorBoundary>
+  );
 }
 
 // --- THE SAFETY NET ---
 export function ErrorBoundary() {
   const error = useRouteError();
+
+  // Log the route error
+  const logger = getLogger();
+  if (error instanceof Error) {
+    logger?.error('client', `Route error: ${error.message}`, error, {
+      url: typeof window !== 'undefined' ? window.location.href : undefined,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
+    });
+  } else {
+    logger?.error('client', `Route error: ${String(error)}`, undefined, {
+      errorType: typeof error,
+      url: typeof window !== 'undefined' ? window.location.href : undefined
+    });
+  }
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
